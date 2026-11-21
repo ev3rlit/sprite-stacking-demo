@@ -30,7 +30,8 @@
           "frontWidth": 24,
           "rearWidth": 27
         }
-      }
+      },
+      "icon": "assets/icons/rover.png"
     },
     "inspection": {
       "id": "inspection",
@@ -59,7 +60,8 @@
           "frontWidth": 31,
           "rearWidth": 35
         }
-      }
+      },
+      "icon": "assets/icons/inspection.png"
     },
     "ant": {
       "id": "ant",
@@ -96,7 +98,8 @@
         "front_axle": 32,
         "rear_axle": -32,
         "half_track": 20
-      }
+      },
+      "icon": "assets/icons/ant.png"
     }
   },
   "props": [

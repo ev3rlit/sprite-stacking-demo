@@ -17,7 +17,7 @@ const literal = (data) => JSON.stringify(data).replace(/</g, '\\u003c');
 const worker = text('src/worker.js');
 const runtime = text('src/runtime.js');
 const styles = text('src/styles.css');
-const template = text('src/index.html');
+let template = text('src/index.html');
 const { fleet, props } = JSON.parse(text('src/asset-catalog.json'));
 
 const assets = Object.fromEntries(Object.entries(fleet).map(([key, input]) => {
@@ -30,7 +30,13 @@ const assets = Object.fromEntries(Object.entries(fleet).map(([key, input]) => {
     sources.push(source);
     return [partName, { ...part, source: encode(source) }];
   })) : undefined;
-  const asset = { ...input, body: encode(body), wheel: encode(wheel), version: sha(sources) };
+  const { icon, ...fields } = input;
+  if (icon) {
+    const src = 'src="../' + icon + '"';
+    if (!template.includes(src)) throw new Error('Missing template icon: ' + icon);
+    template = template.replace(src, () => 'src="data:image/png;base64,' + encode(bytes(icon)) + '"');
+  }
+  const asset = { ...fields, body: encode(body), wheel: encode(wheel), version: sha(sources) };
   if (parts) asset.parts = parts;
   return [key, asset];
 }));

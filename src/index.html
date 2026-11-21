@@ -30,13 +30,20 @@
     </div>
   </section>
   <div class="asset-controls" role="group" aria-label="차종 및 공용 렌더링">
-    <label for="vehicleSelect">차종</label>
-    <select id="vehicleSelect">
-      <option value="rover">4륜 물류 로버</option>
-      <option value="inspection">산업용 점검 로봇</option>
-      <option value="ant">개미 메카</option>
-      <option value="custom" hidden>사용자 4면 에셋</option>
-    </select>
+    <div class="vehicle-picker" id="vehiclePicker" role="group" aria-label="차종 선택">
+      <button type="button" class="vehicle-option" data-vehicle="rover" aria-pressed="true">
+        <img class="vehicle-icon" src="../assets/icons/rover.png" alt="" width="48" height="34"><span>4륜 물류 로버</span>
+      </button>
+      <button type="button" class="vehicle-option" data-vehicle="inspection" aria-pressed="false">
+        <img class="vehicle-icon" src="../assets/icons/inspection.png" alt="" width="48" height="34"><span>산업용 점검 로봇</span>
+      </button>
+      <button type="button" class="vehicle-option" data-vehicle="ant" aria-pressed="false">
+        <img class="vehicle-icon" src="../assets/icons/ant.png" alt="" width="48" height="34"><span>개미 메카</span>
+      </button>
+      <button type="button" class="vehicle-option" data-vehicle="custom" aria-pressed="false" hidden>
+        <span class="vehicle-custom-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>사용자 4면 에셋</span>
+      </button>
+    </div>
     <button id="openFourViews" type="button" title="윗면 · 왼쪽 옆면 · 앞면 · 뒷면의 한 줄 PNG">4면 PNG 열기</button>
     <input id="fourViewFile" type="file" accept="image/png" hidden>
     <div class="ability-bar">

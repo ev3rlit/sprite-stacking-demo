@@ -1629,7 +1629,9 @@ const textureValue=document.getElementById("textureValue");
 const pipelineStatus=document.getElementById("pipelineStatus");
 const activeLayers=document.getElementById("activeLayers");
 const inMemory=new Map();
-const vehicleSelect=document.getElementById("vehicleSelect");
+const vehiclePicker=document.getElementById("vehiclePicker");
+const vehicleOptions=[...vehiclePicker.querySelectorAll("[data-vehicle]")];
+const customVehicleOption=vehicleOptions.find(button=>button.dataset.vehicle==="custom");
 const assetTitle=document.getElementById("assetTitle");
 const fourViewFile=document.getElementById("fourViewFile");
 let selectedAsset=ASSETS.rover, importedAsset=null;
@@ -1714,6 +1716,9 @@ function switchAsset(asset) {
   activeLayers.textContent="";
   mobilitySpacing.set(selectedAsset,view.spacing);
   selectedAsset=asset;
+  for(const button of vehicleOptions){
+    button.setAttribute("aria-pressed",String(button.dataset.vehicle===asset.id));
+  }
   const spacing=viewSliders.find(slider=>slider.key==="spacing");
   spacing.input.value=mobilitySpacing.get(asset)??DEFAULT_VIEW.spacing;
   spacing.sync();
@@ -1766,10 +1771,25 @@ function switchAsset(asset) {
     textureSlider.disabled=true;
   }
 }
-vehicleSelect.addEventListener("change",()=>{
+vehiclePicker.addEventListener("click",event=>{
+  const button=event.target.closest("[data-vehicle]");
+  if(!button)return;
   ++fileRequest;
-  const asset=vehicleSelect.value==="custom"?importedAsset:ASSETS[vehicleSelect.value];
-  if(asset)switchAsset(asset);
+  const id=button.dataset.vehicle;
+  const asset=id==="custom"?importedAsset:ASSETS[id];
+  if(asset&&(asset!==selectedAsset||pipelineStatus.dataset.source==="error"))switchAsset(asset);
+});
+vehiclePicker.addEventListener("keydown",event=>{
+  const controls={ArrowLeft:-1,ArrowUp:-1,ArrowRight:1,ArrowDown:1,Home:0,End:0};
+  if(!Object.hasOwn(controls,event.code))return;
+  const enabled=vehicleOptions.filter(button=>!button.hidden);
+  const index=enabled.indexOf(event.target);
+  if(index<0)return;
+  event.preventDefault();
+  event.stopPropagation();
+  const target=event.code==="Home"?0:event.code==="End"?enabled.length-1:
+    (index+controls[event.code]+enabled.length)%enabled.length;
+  enabled[target].focus();
 });
 document.getElementById("openFourViews").addEventListener("click",()=>fourViewFile.click());
 fourViewFile.addEventListener("change",()=>{
@@ -1784,8 +1804,7 @@ fourViewFile.addEventListener("change",()=>{
   const reader=new FileReader();
   reader.onload=()=>{
     if(request!==fileRequest)return;
-    vehicleSelect.querySelector('[value="custom"]').hidden=false;
-    vehicleSelect.value="custom";
+    customVehicleOption.hidden=false;
     importedAsset={id:"custom",title:"사용자 4면 에셋",body:reader.result.split(",")[1],wheel:null,version:"custom",
       profile:{body:{width:80,length:188,layers:90},body_clearance:0,front_axle:0,rear_axle:0,half_track:0},
       custom:true};
