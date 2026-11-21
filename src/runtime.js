@@ -693,7 +693,7 @@ function update(dt) {
   if(activeStack.custom){
     const steer=input("right")-input("left");
     robot.heading=wrap(robot.heading+dt*(steer*1.8+(robot.mode==="patrol"?activeTuning().orbit*Math.PI/180:0)));
-    status.value=robot.mode==="patrol"||steer?"에셋 회전":"정지";
+    status.value=robot.mode==="patrol"||steer?"Rotating asset":"Stop";
     speed.value="—";
     return;
   }
@@ -755,8 +755,8 @@ function update(dt) {
   const follow = 1-Math.exp(-4.5*dt);
   camera.x += (robot.x*tracking-camera.x)*follow;
   camera.y += (robot.y*tracking-camera.y)*follow;
-  const message = skill.remaining>0&&selectedAsset.id==="rover" ? "부스트" : robot.mode === "patrol" ? "순찰 중" : travel < -.002 ? "후진" :
-    travel > .002 ? "전진" : Math.abs(robot.steering) > .02 ? "앞바퀴 조향" : "정차";
+  const message = skill.remaining>0&&selectedAsset.id==="rover" ? "Boost" : robot.mode === "patrol" ? "Patrolling" : travel < -.002 ? "Reverse" :
+    travel > .002 ? "Forward" : Math.abs(robot.steering) > .02 ? "Steering" : "Stopped";
   const value = Math.round(Math.abs(travel)/Math.max(.001,dt))+" px/s";
   if (status.value !== message) status.value = message;
   if (speed.value !== value) speed.value = value;
@@ -954,25 +954,25 @@ for (const button of touchButtons) {
 
 const tuningDefinitions={
   rover:[
-    {id:"forward",label:"최고 전진 속도",min:55,max:225,step:1,base:126,unit:" px/s"},
-    {id:"reverse",label:"최고 후진 속도",min:20,max:115,step:1,base:61,unit:" px/s"},
-    {id:"steering",label:"최대 조향각",min:12,max:44,step:1,base:32,unit:"°"},
-    {id:"response",label:"조향 반응",min:4,max:25,step:.5,base:12,unit:""},
+    {id:"forward",label:"Top Forward Speed",min:55,max:225,step:1,base:126,unit:" px/s"},
+    {id:"reverse",label:"Top Reverse Speed",min:20,max:115,step:1,base:61,unit:" px/s"},
+    {id:"steering",label:"Max Steering Angle",min:12,max:44,step:1,base:32,unit:"°"},
+    {id:"response",label:"Steering Response",min:4,max:25,step:.5,base:12,unit:""},
   ],
   inspection:[
-    {id:"forward",label:"최고 전진 속도",min:24,max:130,step:1,base:88,unit:" px/s"},
-    {id:"reverse",label:"최고 후진 속도",min:12,max:75,step:1,base:43,unit:" px/s"},
-    {id:"steering",label:"최대 조향각",min:15,max:46,step:1,base:36,unit:"°"},
-    {id:"scanRange",label:"스캔 범위",min:80,max:225,step:5,base:155,unit:" px"},
+    {id:"forward",label:"Top Forward Speed",min:24,max:130,step:1,base:88,unit:" px/s"},
+    {id:"reverse",label:"Top Reverse Speed",min:12,max:75,step:1,base:43,unit:" px/s"},
+    {id:"steering",label:"Max Steering Angle",min:15,max:46,step:1,base:36,unit:"°"},
+    {id:"scanRange",label:"Scan Range",min:80,max:225,step:5,base:155,unit:" px"},
   ],
   ant:[
-    {id:"walk",label:"보행 속도",min:28,max:150,step:1,base:82,unit:" px/s"},
-    {id:"turn",label:"몸체 회전 속도",min:60,max:330,step:5,base:160,unit:"°/s"},
-    {id:"aimResponse",label:"마우스 추종 반응",min:4,max:25,step:.5,base:14,unit:""},
-    {id:"leap",label:"도약 보행 속도",min:112,max:290,step:1,base:214,unit:" px/s"},
+    {id:"walk",label:"Walk Speed",min:28,max:150,step:1,base:82,unit:" px/s"},
+    {id:"turn",label:"Body Turn Speed",min:60,max:330,step:5,base:160,unit:"°/s"},
+    {id:"aimResponse",label:"Mouse Aim Response",min:4,max:25,step:.5,base:14,unit:""},
+    {id:"leap",label:"Leap Speed",min:112,max:290,step:1,base:214,unit:" px/s"},
   ],
   custom:[
-    {id:"orbit",label:"자동 회전 속도",min:10,max:135,step:1,base:34,unit:"°/s"},
+    {id:"orbit",label:"Auto-Rotate Speed",min:10,max:135,step:1,base:34,unit:"°/s"},
   ],
 };
 const tuningByAsset=new Map();
@@ -1016,13 +1016,13 @@ function renderMobilityTuning(){
   mobilityTuning.replaceChildren(group);
 }
 const mobilityProfiles={
-  rover:{ability:"부스트",keys:["ShiftLeft","ShiftRight"],label:"Shift",active:1.35,recharge:4.2,
-    hint:"WASD / 방향키 주행 · Shift 부스트 · Space 정지"},
-  inspection:{ability:"센서 스캔",keys:["KeyE"],label:"E",active:1.25,recharge:3.4,
-    hint:"WASD / 방향키 주행 · E 센서 스캔 · Space 정지"},
-  ant:{ability:"도약 보행",keys:["KeyF"],label:"F",active:.63,recharge:2.6,
-    hint:"WASD / 방향키 이동 · 마우스 조준 · Q/E 회전 · F 도약 보행"},
-  custom:{hint:"← / → 회전 · Space 정지 · R 초기화"},
+  rover:{ability:"Boost",keys:["ShiftLeft","ShiftRight"],label:"Shift",active:1.35,recharge:4.2,
+    hint:"WASD / arrow keys to drive · Shift to boost · Space to stop"},
+  inspection:{ability:"Sensor Scan",keys:["KeyE"],label:"E",active:1.25,recharge:3.4,
+    hint:"WASD / arrow keys to drive · E to scan · Space to stop"},
+  ant:{ability:"Leap",keys:["KeyF"],label:"F",active:.63,recharge:2.6,
+    hint:"WASD / arrow keys to move · Mouse to aim · Q/E to turn · F to leap"},
+  custom:{hint:"← / → to rotate · Space to stop"},
 };
 const skillButton=document.getElementById("mobilityAbility");
 const skillStatus=document.getElementById("abilityStatus");
@@ -1044,7 +1044,7 @@ function resetMobility(){
 }
 function configureMobilityUI(){
   const profile=currentMobility();
-  inputHelp.textContent=profile.hint+" · R 초기화";
+  inputHelp.textContent=profile.hint+" · R to reset";
   renderMobilityTuning();
   canvas.style.cursor=selectedAsset.id==="ant"?"crosshair":"";
   skillButton.hidden=!profile.ability;
@@ -1053,7 +1053,7 @@ function configureMobilityUI(){
   document.querySelectorAll("[data-ant-turn]").forEach(button=>{button.hidden=selectedAsset.id!=="ant";});
   const sideButtons=document.querySelectorAll('[data-key="left"],[data-key="right"]');
   sideButtons.forEach((button,index)=>button.setAttribute("aria-label",
-    selectedAsset.id==="ant"?(index?"오른쪽 이동":"왼쪽 이동"):(index?"우회전":"좌회전")));
+    selectedAsset.id==="ant"?(index?"Move right":"Move left"):(index?"Turn Right":"Turn Left")));
   updateAbilityUI();
 }
 function updateAbilityUI(){
@@ -1062,9 +1062,9 @@ function updateAbilityUI(){
   skillButton.disabled=!activeStack||skill.cooldown>0;
   skillButton.setAttribute("aria-pressed",String(working));
   const message=selectedAsset.id==="inspection"&&working
-    ? "스캔 중 · 표식 "+skill.hits+"개"
-    : working ? "작동 중" : skill.cooldown>0 ? "충전 "+skill.cooldown.toFixed(1)+"초" :
-      selectedAsset.id==="inspection"&&skill.triggered ? "표식 "+skill.hits+"개 확인" : "준비";
+    ? `Scanning · Targets: ${skill.hits}`
+    : working ? "Active" : skill.cooldown>0 ? `Recharging · ${skill.cooldown.toFixed(1)} s` :
+      selectedAsset.id==="inspection"&&skill.triggered ? `Targets detected: ${skill.hits}` : "Ready";
   if(skillStatus.value!==message)skillStatus.value=message;
 }
 function activateAbility(){
@@ -1152,7 +1152,7 @@ function updateAnt(dt){
   const track=size.width<560?.92:.72,follow=1-Math.exp(-5*dt);
   camera.x+=(robot.x*track-camera.x)*follow;
   camera.y+=(robot.y*track-camera.y)*follow;
-  status.value=dash?"도약 보행":robot.velocity>4?"보행 중":Math.abs(motion.omega)>.2?"방향 전환":"대기 중";
+  status.value=dash?"Leap":robot.velocity>4?"Walking":Math.abs(motion.omega)>.2?"Turning":"Idle";
   speed.value=Math.round(robot.velocity)+" px/s";
 }
 
@@ -1240,9 +1240,9 @@ const obstacleTelemetry=document.getElementById("obstacleTelemetry");
 
 function updateObstacleTelemetry(){
   const total=CANISTER_ASSETS.length,loaded=canisterModels.size;
-  const types="종류 "+(loaded===total?total:loaded+"/"+total);
-  const value="표지물 "+canisters.length+" · "+types+" · 충돌 "+obstacleHits+
-    (unavailableCanisters.size?" · 로드 오류 "+unavailableCanisters.size:"");
+  const types="Types "+(loaded===total?total:loaded+"/"+total);
+  const value="Props "+canisters.length+" · "+types+" · Collisions "+obstacleHits+
+    (unavailableCanisters.size?" · Load errors "+unavailableCanisters.size:"");
   if(obstacleTelemetry.value!==value)obstacleTelemetry.value=value;
 }
 function resetCanisters(){
@@ -1290,7 +1290,7 @@ function loadCanisters(){
           for(const item of canisters)if(item.type===asset.id)setCanisterDimensions(item,model);
         } else {
           unavailableCanisters.add(asset.id);
-          console.warn("캐니스터 "+asset.id+": "+message);
+          console.warn("canisters "+asset.id+": "+message);
         }
         inFlight--;
         updateObstacleTelemetry();
@@ -1692,7 +1692,7 @@ const textureRatioOf=stack=>stack.textureRatio??stack.ratio;
 function syncResolutionLabels() {
   layerValue.value=String(layerSlider.valueAsNumber);
   textureValue.value=textureSlider.valueAsNumber.toFixed(2)+"×";
-  layerSlider.setAttribute("aria-valuetext",layerValue.value+" 레이어");
+  layerSlider.setAttribute("aria-valuetext",layerValue.value+" layers");
   textureSlider.setAttribute("aria-valuetext",textureValue.value);
 }
 let activeStack=null, requestedLayers=DEFAULT_LAYERS, requestedRatio=DEFAULT_TEXTURE_SCALE, requestSequence=0, inputTimer=0, worker;
@@ -1707,8 +1707,8 @@ function installStack(stack) {
   lastAngle=null;
   lastSpacing=null;
   lastSquash=null;
-  activeLayers.textContent=stack.ant ? `몸체 ${chassis.layers} · 중앙/사선 다리 ${stack.center.layers} 레이어` :
-    `차체 ${chassis.width} × ${chassis.length} px · ${chassis.layers} 레이어`;
+  activeLayers.textContent=stack.ant ? `Body: ${chassis.layers} layers · Center/angled legs: ${stack.center.layers} layers` :
+    `Body: ${chassis.width} × ${chassis.length} px · ${chassis.layers} layers`;
   updateAbilityUI();
   pipelineStatus.dataset.activeLayers=String(chassis.layers);
   pipelineStatus.dataset.wheelLayers=String(tire?.layers??0);
@@ -1728,10 +1728,10 @@ function reportStack(source,ms,persisted,preview) {
   pipelineStatus.dataset.source=source;
   pipelineStatus.dataset.elapsed=String(Math.round(ms));
   pipelineStatus.dataset.persisted=String(persisted);
-  const message=source==="memory" ? "메모리 캐시" : source==="disk" ? "저장 캐시" : selectedAsset.parts ?
-    (activeStack.layers===selectedAsset.parts.body.n&&textureRatioOf(activeStack)===1?"원본 스택 로드":"원본 스택 재샘플") : "원본에서 생성";
+  const message=source==="memory" ? "Memory cache" : source==="disk" ? "Disk cache" : selectedAsset.parts ?
+    (activeStack.layers===selectedAsset.parts.body.n&&textureRatioOf(activeStack)===1?"Loaded source stack":"Resampled source stack") : "Built from source";
   const elapsed=source==="memory" ? "" : ` · ${Math.round(ms)} ms`;
-  pipelineStatus.value=`${message}${elapsed}${preview ? " · 고해상도 생성 중" : ""}`;
+  pipelineStatus.value=`${message}${elapsed}${preview ? " · Building high-resolution model" : ""}`;
 }
 function requestLayers(layers,ratio,progressive=false) {
   requestedLayers=layers;
@@ -1746,7 +1746,7 @@ function requestLayers(layers,ratio,progressive=false) {
     return;
   }
   pipelineStatus.dataset.source="pending";
-  pipelineStatus.value=`${layers} 레이어 · ${ratio.toFixed(2)}× 생성 중…`;
+  pipelineStatus.value=`Building ${layers} layers at ${ratio.toFixed(2)}×…`;
   worker?.postMessage({type:"stack",sequence,layers,ratio,progressive});
 }
 function switchAsset(asset) {
@@ -1783,11 +1783,11 @@ function switchAsset(asset) {
   HALF_TRACK=profile.half_track/ART_PIXELS_PER_UNIT;
   CENTER_TO_REAR=-REAR_AXLE/ART_PIXELS_PER_UNIT;
   assetTitle.textContent=asset.title;
-  patrolButton.textContent=asset.custom?"자동 회전":"자동 순찰";
-  manualButton.textContent=asset.custom?"정지":"직접 조작";
+  patrolButton.textContent=asset.custom?"Auto-Rotate":"Auto Patrol";
+  manualButton.textContent=asset.custom?"Stop":"Manual";
   document.querySelectorAll(".touch button[data-key='forward'],.touch button[data-key='reverse']")
     .forEach(button=>{button.disabled=!!asset.custom;});
-  status.value="불러오는 중";
+  status.value="Loading";
   speed.value="—";
   clearInputs();
   resetRobot();
@@ -1796,7 +1796,7 @@ function switchAsset(asset) {
     const workerURL=URL.createObjectURL(new Blob([WORKER_SOURCE],{type:"text/javascript"}));
     worker=new Worker(workerURL);
     URL.revokeObjectURL(workerURL);
-    worker.onerror=()=>{pipelineStatus.dataset.source="error";pipelineStatus.value="브라우저에서 변환기를 실행할 수 없습니다.";};
+    worker.onerror=()=>{pipelineStatus.dataset.source="error";pipelineStatus.value="Could not start the reconstruction worker.";};
     worker.onmessage=({data})=>{
       if(data.type==="ready") {
         data.stack.persisted=data.persistent;
@@ -1817,7 +1817,7 @@ function switchAsset(asset) {
     textureSlider.disabled=false;
     requestLayers(layerSlider.valueAsNumber,textureSlider.valueAsNumber,!asset.parts);
   } catch {
-    pipelineStatus.value="이 브라우저에서 런타임 변환기를 열 수 없습니다.";
+    pipelineStatus.value="This browser could not open the reconstruction worker.";
     layerSlider.disabled=true;
     textureSlider.disabled=true;
   }
@@ -1848,7 +1848,7 @@ fourViewFile.addEventListener("change",()=>{
   fourViewFile.value="";
   if(!file)return;
   if(!/\.png$/i.test(file.name)||file.size>15*1024*1024){
-    pipelineStatus.value="15MB 이하의 4면 PNG를 선택하세요.";
+    pipelineStatus.value="Choose a four-view PNG of 15 MB or less.";
     return;
   }
   const request=++fileRequest;
@@ -1856,12 +1856,12 @@ fourViewFile.addEventListener("change",()=>{
   reader.onload=()=>{
     if(request!==fileRequest)return;
     customVehicleOption.hidden=false;
-    importedAsset={id:"custom",title:"사용자 4면 에셋",body:reader.result.split(",")[1],wheel:null,version:"custom",
+    importedAsset={id:"custom",title:"Custom Four-View Asset",body:reader.result.split(",")[1],wheel:null,version:"custom",
       profile:{body:{width:80,length:188,layers:90},body_clearance:0,front_axle:0,rear_axle:0,half_track:0},
       custom:true};
     switchAsset(importedAsset);
   };
-  reader.onerror=()=>{pipelineStatus.value="PNG 파일을 읽을 수 없습니다.";};
+  reader.onerror=()=>{pipelineStatus.value="Could not read the PNG file.";};
   reader.readAsDataURL(file);
 });
 

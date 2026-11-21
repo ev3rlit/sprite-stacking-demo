@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>픽셀 택시 · 주행 데모</title>
+<title>Pixel Taxi · Driving Demo</title>
 <style>
   :root {
     --bg: #f1f4f8;
@@ -145,14 +145,14 @@
 <header>
   <div class="title">
     <span class="cab-mark" aria-hidden="true"></span>
-    <h1 id="titleText">픽셀 택시</h1>
+    <h1 id="titleText">Pixel Taxi</h1>
     <span id="metaText" hidden></span>
   </div>
-  <div class="modes" role="group" aria-label="화면 선택">
-    <button data-mode="play" aria-pressed="true">운전</button>
-    <button data-mode="turntable" aria-pressed="false">차량 보기</button>
-    <button id="resetDrive" title="R">다시 시작</button>
-    <button id="playBtn" hidden>정지</button>
+  <div class="modes" role="group" aria-label="View selection">
+    <button data-mode="play" aria-pressed="true">Drive</button>
+    <button data-mode="turntable" aria-pressed="false">View Vehicle</button>
+    <button id="resetDrive" title="R">Restart</button>
+    <button id="playBtn" hidden>Stop</button>
   </div>
   <div hidden>
     <button id="exportBtn"></button>
@@ -168,32 +168,32 @@
   <div class="toy-bar" id="toyBar" hidden>
     <span id="driveWorldGroup"></span><span id="toyHint"></span>
   </div>
-  <canvas id="view" aria-label="픽셀 택시 화면"></canvas>
-  <div class="readout" id="readout">불러오는 중</div>
-  <div class="touch-controls" aria-label="터치 주행 조작">
+  <canvas id="view" aria-label="Pixel taxi view"></canvas>
+  <div class="readout" id="readout">Loading</div>
+  <div class="touch-controls" aria-label="Touch driving controls">
     <div>
-      <button data-drive-key="left" aria-label="좌회전">◀</button>
-      <button data-drive-key="right" aria-label="우회전">▶</button>
+      <button data-drive-key="left" aria-label="Turn Left">◀</button>
+      <button data-drive-key="right" aria-label="Turn Right">▶</button>
     </div>
     <div>
-      <button data-drive-key="brake">드리프트</button>
-      <button data-drive-key="down">후진</button>
-      <button data-drive-key="up">가속</button>
+      <button data-drive-key="brake">Drift</button>
+      <button data-drive-key="down">Reverse</button>
+      <button data-drive-key="up">Accelerate</button>
     </div>
   </div>
 </main>
 
 <footer>
   <div class="instructions" id="driveInstructions">
-    <span><kbd>WASD</kbd> / <kbd>방향키</kbd> 주행</span>
-    <span><kbd>Space</kbd> 드리프트</span>
-    <span><kbd>R</kbd> 다시 시작</span>
+    <span><kbd>WASD</kbd> / <kbd>arrow keys</kbd> drive</span>
+    <span><kbd>Space</kbd> Drift</span>
+    <span><kbd>R</kbd> Restart</span>
   </div>
-  <div class="instructions" id="orbitInstructions" hidden>드래그로 회전</div>
-  <div class="weather-buttons" role="group" aria-label="날씨">
-    <button data-weather="clear" aria-pressed="true">맑음</button>
-    <button data-weather="rain" aria-pressed="false">비</button>
-    <button data-weather="snow" aria-pressed="false">눈</button>
+  <div class="instructions" id="orbitInstructions" hidden>Drag to rotate</div>
+  <div class="weather-buttons" role="group" aria-label="Weather">
+    <button data-weather="clear" aria-pressed="true">Clear</button>
+    <button data-weather="rain" aria-pressed="false">Rain</button>
+    <button data-weather="snow" aria-pressed="false">Snow</button>
   </div>
   <div hidden>
     <input id="angleRange" type="range" min="0" max="360" step="1" value="35" />
@@ -2076,8 +2076,8 @@ function drawDriveFrame() {
   // Weather foreground rain/snow
   drawWeatherOverlay(ctx, aw, ah, s, env);
 
-  const status = drive.drifting ? "드리프트" : drive.speed < 0.2 ? "정차" :
-    drive.vx * Math.cos(drive.heading) + drive.vy * Math.sin(drive.heading) < 0 ? "후진" : "전진";
+  const status = drive.drifting ? "Drift" : drive.speed < 0.2 ? "Stopped" :
+    drive.vx * Math.cos(drive.heading) + drive.vy * Math.sin(drive.heading) < 0 ? "Reverse" : "Forward";
   const label = `${status} · ${Math.round(drive.speed)} px/s`;
   if (readout.textContent !== label) readout.textContent = label;
 }
@@ -2359,7 +2359,7 @@ function drawFrame() {
   ctx.drawImage(buf, 0, 0, cw, ch);
   drawWeatherOverlay(ctx, buf.width, buf.height, fittedScale, env);
   state.lastRenderMs = performance.now() - t0;
-  readout.textContent = `회전 ${Math.round(((state.angle % 360) + 360) % 360)}°`;
+  readout.textContent = `Rotate ${Math.round(((state.angle % 360) + 360) % 360)}°`;
 }
 
 let lastT = performance.now();
@@ -2428,7 +2428,7 @@ stage.addEventListener("pointerdown", (e) => {
   };
   if ((state.mode === "turntable" || state.mode === "scene") && !e.shiftKey) {
     state.playing = false;
-    els.play.textContent = "회전";
+    els.play.textContent = "Rotate";
   }
 });
 stage.addEventListener("pointermove", (e) => {
@@ -2476,7 +2476,7 @@ document.querySelectorAll("[data-mode]").forEach((btn) => {
     if (state.mode === "exploded") state.explodePhase = 0;
     if (state.mode === "play") {
       state.playing = true;
-      els.play.textContent = "정지";
+      els.play.textContent = "Stop";
     }
     syncPlayUI();
     state.dirty = true;
@@ -2528,7 +2528,7 @@ document.querySelectorAll("[data-toy]").forEach((btn) => {
 
 els.play.addEventListener("click", () => {
   state.playing = !state.playing;
-  els.play.textContent = state.playing ? "정지" : "회전";
+  els.play.textContent = state.playing ? "Stop" : "Rotate";
   state.dirty = true;
 });
 
@@ -2610,7 +2610,7 @@ els.angle.addEventListener("input", () => {
   state.angle = Number(els.angle.value);
   els.angleOut.textContent = `${state.angle}°`;
   state.playing = false;
-  els.play.textContent = "회전";
+  els.play.textContent = "Rotate";
   state.dirty = true;
 });
 els.squash.addEventListener("input", () => {
@@ -2762,7 +2762,7 @@ async function init() {
   requestAnimationFrame(tick);
 }
 init().catch(error => {
-  readout.textContent = "택시 이미지를 불러오지 못했습니다.";
+  readout.textContent = "Could not load the taxi images.";
   console.error(error);
 });
 </script>

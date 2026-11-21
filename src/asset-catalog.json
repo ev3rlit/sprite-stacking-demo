@@ -2,7 +2,7 @@
   "fleet": {
     "rover": {
       "id": "rover",
-      "title": "4륜 물류 로버",
+      "title": "Cargo Rover",
       "body": "assets/rover/fillet-rover-body-4-view.png",
       "wheel": "assets/rover/fillet-rover-wheel-4-view.png",
       "profile": {
@@ -35,7 +35,7 @@
     },
     "inspection": {
       "id": "inspection",
-      "title": "산업용 점검 로봇",
+      "title": "Inspection Robot",
       "body": "assets/inspection/inspection-robot-body-4-view.png",
       "wheel": "assets/inspection/inspection-robot-wheel-4-view.png",
       "profile": {
@@ -65,7 +65,7 @@
     },
     "ant": {
       "id": "ant",
-      "title": "개미 메카",
+      "title": "Ant Mech",
       "parts": {
         "body": {
           "w": 50,

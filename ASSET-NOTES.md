@@ -1,7 +1,7 @@
-# 에셋
+# Asset Notes
 
-`assets/`에 택시, 점검 로봇, 물류 로버, 개미 메카, 캐니스터의 4면 원본과 제작 결과를 보존합니다. 캐니스터 원본은 폴더 안의 19종과 기존 올리브 캐니스터를 포함합니다. 별도 작업 폴더에 있던 05번 시안도 보존했습니다. 주행 데모에서 실제로 사용하는 원본은 `src/asset-catalog.json`에 등록합니다.
+The `assets/` directory preserves four-view inputs and generated assets for the taxi, inspection robot, cargo rover, ant mech, and canisters. The canister set includes 19 numbered variants and the original olive canister. Variant 05 was preserved from a separate working folder. The sources used by the driving demo are registered in `src/asset-catalog.json`.
 
-4면 이미지 순서는 윗면, 왼쪽 옆면, 앞면, 뒷면입니다. 윗면은 앞쪽이 아래, 왼쪽 옆면은 앞쪽이 왼쪽을 향합니다. 차체와 휠의 치수와 장착점은 카탈로그에 기록되어 있습니다.
+The four views are ordered top, left, front, and rear. The vehicle's front points down in the top view and left in the left view. Body and wheel dimensions and mounting points are recorded in the asset catalog.
 
-Marching Cubes 룩업 테이블의 three.js r180 MIT 라이선스 고지는 `src/worker.js`에 포함되어 있습니다.
+The three.js r180 MIT license notice for the Marching Cubes lookup table is included in `src/worker.js`.

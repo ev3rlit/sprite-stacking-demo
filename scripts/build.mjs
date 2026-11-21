@@ -67,4 +67,4 @@ mkdirSync(resolve(root, 'dist'), { recursive: true });
 const file = resolve(root, 'dist/index.html');
 writeFileSync(file + '.tmp', output);
 renameSync(file + '.tmp', file);
-console.log('dist/index.html · ' + (Buffer.byteLength(output) / 1024 / 1024).toFixed(2) + ' MiB · ' + canisters.length + ' 캐니스터');
+console.log('dist/index.html · ' + (Buffer.byteLength(output) / 1024 / 1024).toFixed(2) + ' MiB · ' + canisters.length + ' canisters');

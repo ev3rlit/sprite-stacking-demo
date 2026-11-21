@@ -1,62 +1,103 @@
 # Sprite Stacking Test
 
-4면 PNG에서 스택과 메시를 브라우저에서 생성하는 차량·개미 메카 데모입니다. 차종별 조작과 어빌리티, 캐니스터 충돌, 레이어·텍스처 해상도 설정, Marching Cubes 및 다중 뷰 텍스처링 비교를 포함합니다.
+Drive a four-wheel cargo rover, an inspection robot, or a six-legged ant mech through a test yard. The browser reconstructs vehicles from four-view PNGs and lets you compare sprite stacking, Marching Cubes, and multi-view texturing in real time.
 
-## 모델 턴테이블
+## Model Turntables
 
-<table>
-  <thead>
-    <tr>
-      <th scope="col">4륜 물류 로버</th>
-      <th scope="col">점검 로봇</th>
-      <th scope="col">개미 메카</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td width="33%" align="center"><img src="docs/media/rover-turntable.gif" width="352" alt="4륜 물류 로버의 360도 회전"></td>
-      <td width="33%" align="center"><img src="docs/media/inspection-turntable.gif" width="352" alt="점검 로봇의 360도 회전"></td>
-      <td width="33%" align="center"><img src="docs/media/ant-turntable.gif" width="352" alt="개미 메카의 360도 회전"></td>
-    </tr>
-  </tbody>
-</table>
+<p align="center">
+  <img src="docs/media/rover-turntable.gif" width="32%" alt="Four-wheel cargo rover rotating 360 degrees" title="Cargo Rover">
+  <img src="docs/media/inspection-turntable.gif" width="32%" alt="Inspection robot rotating 360 degrees" title="Inspection Robot">
+  <img src="docs/media/ant-turntable.gif" width="32%" alt="Ant mech rotating 360 degrees" title="Ant Mech">
+</p>
 
-## 런타임 워크플로우
+<p align="center">Cargo Rover · Inspection Robot · Ant Mech</p>
 
-![로버의 4면 원본, 실루엣을 교차해 생성한 슬라이스, 런타임 렌더링과 층줄 보정 전후 비교](docs/media/workflow.png)
+## How to Play
 
-1. **4면 이미지 입력** — 브라우저가 [로버 차체 원본 PNG](assets/rover/fillet-rover-body-4-view.png)를 윗면, 왼쪽 옆면, 앞면, 뒷면으로 나눕니다. 바퀴는 별도 4면 이미지에서 복원하고 차축을 기준으로 조향하고 회전시킵니다.
-2. **런타임 복원과 캐싱** — Web Worker가 네 실루엣의 교집합을 계산해 복셀과 높이별 슬라이스를 만듭니다. 레이어 수와 텍스처 배율에 따라 격자가 달라지며, 동일한 설정은 메모리나 IndexedDB에 캐싱된 결과를 재사용합니다.
-3. **스택 또는 메시 렌더링** — 수평 슬라이스를 쌓아 그리거나, Marching Cubes로 복셀 경계를 이어 삼각형 표면을 만듭니다. 다중 뷰 텍스처링은 표면 방향과 원본 뷰에서의 가시성을 반영해 색을 고르고, 비슷한 색끼리 혼합합니다.
+[**Download the standalone HTML demo on GitHub**](https://github.com/ev3rlit/sprite-stacking-test/blob/main/dist/index.html)
 
-### 층줄 보정
+Sign in with a GitHub account that has access to this private repository. On the file page, choose **Download raw file**, then open the saved HTML in your browser. The file includes the game code, styles, worker, and images. It runs offline after download.
 
-수평 스택은 특정 각도에서 층 경계가 드러납니다. 위 사례에서는 앞면의 밝은 색이 인접한 층 가장자리에 반복되어 점선처럼 보입니다. Marching Cubes는 층 사이를 연속된 표면으로 잇고, 다중 뷰 텍스처링은 그 표면에 맞는 원본 색을 다시 투영합니다. 두 기능은 공용 렌더링 패널에서 각각 전환할 수 있습니다.
+To download and launch it in one step, install the [GitHub CLI](https://cli.github.com/), then sign in once with `gh auth login --hostname github.com`.
 
-위 전후 화면은 같은 각도, 120레이어, 텍스처 2×, Spacing 1.00에서 실제 데모를 캡처한 결과입니다. 확대 영역의 차이는 두 렌더링 기능을 함께 켰을 때의 결과입니다.
+### macOS Terminal
 
-## 실행
+```sh
+demo_dir="$(mktemp -d "${TMPDIR:-/tmp}/sprite-stacking.XXXXXX")" &&
+  demo="$demo_dir/sprite-stacking-demo.html" &&
+  gh api --hostname github.com -H 'Accept: application/vnd.github.raw+json' \
+    'repos/ev3rlit/sprite-stacking-test/contents/dist/index.html?ref=main' > "$demo" &&
+  open "$demo"
+```
+
+### Windows PowerShell
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $token = gh auth token --hostname github.com
+    if ($LASTEXITCODE -ne 0 -or -not $token) { throw 'Run gh auth login --hostname github.com first.' }
+
+    $folder = Join-Path ([System.IO.Path]::GetTempPath()) ("sprite-stacking-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $folder | Out-Null
+    $demo = Join-Path $folder 'sprite-stacking-demo.html'
+    $url = 'https://api.github.com/repos/ev3rlit/sprite-stacking-test/contents/dist/index.html?ref=main'
+    Invoke-WebRequest -UseBasicParsing -Uri $url -Headers @{
+        Accept = 'application/vnd.github.raw+json'
+        Authorization = "Bearer $token"
+    } -OutFile $demo
+    Start-Process $demo
+}
+```
+
+Both commands save a fresh copy in a temporary folder and open it with your system's HTML file association.
+
+### Controls
+
+Select a model using the vehicle icons. Use **WASD** or the **arrow keys** to move, **Space** to stop, and **R** to reset.
+
+| Model | Special controls |
+| --- | --- |
+| Cargo Rover | **Shift** boosts. |
+| Inspection Robot | **E** scans nearby props. |
+| Ant Mech | Aim with the mouse. **Q / E** rotate the body, and **F** triggers a leap. |
+
+## Runtime Workflow
+
+![Rover four-view input, reconstructed slices, and a side-by-side comparison of layer banding](docs/media/workflow.png)
+
+1. **Four-view input.** The browser splits the [rover body PNG](assets/rover/fillet-rover-body-4-view.png) into top, left, front, and rear views. The wheels are reconstructed from a separate four-view image so they can steer and spin around their own axles.
+2. **Runtime reconstruction and caching.** A Web Worker intersects the four silhouettes to generate a voxel volume and horizontal slices. The layer count controls vertical resolution, while texture scale controls the horizontal grid. The demo reuses matching results from memory or IndexedDB when available.
+3. **Stack or mesh rendering.** The renderer draws the horizontal slices or uses Marching Cubes to extract a continuous triangle surface from the voxel volume. Multi-view texturing weights source colors by surface orientation and visibility, then blends similar colors.
+
+### Reducing Layer Banding
+
+At some angles, the horizontal stack exposes slice edges. In the example above, bright colors from the front image repeat along adjacent slice edges, producing dotted bands. Marching Cubes connects the layers with a continuous surface. Multi-view texturing reprojects source colors onto that surface. You can toggle each technique independently in **Rendering**.
+
+The before-and-after captures use the same angle, 120 layers, 2× texture resolution, and spacing of 1.00. The close-ups show the combined effect of both techniques.
+
+### Anti-Aliasing and Performance
+
+The shared controls let you toggle 2× supersampling, Subpixel AA, and Specular AA independently. Supersampling renders at twice the screen resolution along each axis before downsampling. Subpixel AA samples coverage at four points per pixel along model and prop edges. Specular AA reduces shimmer from rapid normal changes under material lighting.
+
+The performance panel updates every 400 ms and shows FPS, frame time, and render CPU time. It starts a fresh measurement after you change an AA or supersampling setting.
+
+## Build and Test
+
+Use Node.js 20 or later.
 
 ```sh
 npm run build
 npm test
 ```
 
-Node.js 20 이상이 필요합니다. `dist/index.html`을 브라우저에서 열면 실행됩니다. 이 파일에는 HTML, CSS, JavaScript, 변환 Worker, 데모가 사용하는 PNG가 들어 있어 오프라인에서도 열 수 있습니다.
+Open `dist/index.html` in a browser to play the new build.
 
-공용 렌더링에서 서브픽셀 AA와 Specular AA를 각각 켜고 끌 수 있습니다. 서브픽셀 AA는 모델과 프롭의 윤곽을 네 지점에서 샘플링하고, Specular AA는 재질 조명을 켰을 때 노멀 변화가 큰 반사를 완화합니다.
+## Repository Layout
 
-화면의 성능 패널은 FPS, 프레임 간격, 렌더 CPU 시간을 400ms 단위로 표시합니다. AA 또는 슈퍼샘플링을 전환하면 새 설정으로 측정을 다시 시작합니다. 렌더 CPU 시간은 브라우저에서 렌더링 코드를 실행하는 데 걸린 시간입니다.
+- `src/` contains the UI, runtime, reconstruction worker, and asset catalog.
+- `assets/` contains four-view PNGs, slices, and concept images.
+- `examples/` contains earlier standalone demos.
+- `dist/index.html` is the standalone build for downloads and static hosting.
 
-## 구조
-
-- `src/` 화면, 런타임, 변환 Worker, 에셋 카탈로그
-- `assets/` 4면 PNG, 슬라이스, 콘셉트 이미지
-- `examples/` 택시, 점검 로봇, 개미 메카, 로버의 개별 데모
-- `dist/index.html` 배포와 오프라인 실행에 사용하는 단일 HTML
-
-현재 통합 데모의 에셋 구성은 [에셋 노트](ASSET-NOTES.md)에 정리했습니다. 원본이나 런타임을 바꾸면 단일 HTML도 다시 빌드합니다.
-
-## GPT Sites에 배포
-
-정적 사이트 디렉터리는 `dist`입니다. 배포에 필요한 애플리케이션 파일은 `dist/index.html` 하나입니다. 새 버전을 배포하려면 원본을 변경한 뒤 `npm run build && npm test`로 이 파일을 다시 만들고, 갱신된 파일을 Sites의 정적 빌드로 올립니다.
+See the [asset notes](ASSET-NOTES.md) for the source layout. Rebuild the standalone file after changing runtime code or bundled assets.

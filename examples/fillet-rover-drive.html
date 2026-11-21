@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>4륜 물류 로버 · 주행 데모</title>
+<title>Cargo Rover · Driving Demo</title>
 <style>
 :root{color-scheme:dark;--ink:#eff4fa;--muted:#b6c0cd;--lime:#d7f44a;--line:#404b59;--panel:#1d2531;--base:#141a24}
 *{box-sizing:border-box}
@@ -61,47 +61,47 @@ kbd{font:600 12px ui-monospace,monospace;color:var(--ink)}
 <body>
 <main>
   <header>
-    <div class="brand"><span class="mark" aria-hidden="true"></span><h1>4륜 물류 로버</h1></div>
-    <div class="controls" role="group" aria-label="주행 모드">
-      <button id="patrol" aria-pressed="true">자동 순찰</button>
-      <button id="manual" aria-pressed="false">직접 조작</button>
-      <button id="reset">초기화</button>
+    <div class="brand"><span class="mark" aria-hidden="true"></span><h1>Cargo Rover</h1></div>
+    <div class="controls" role="group" aria-label="Drive mode">
+      <button id="patrol" aria-pressed="true">Auto Patrol</button>
+      <button id="manual" aria-pressed="false">Manual</button>
+      <button id="reset">Reset</button>
     </div>
   </header>
-  <section class="stage" aria-label="산업 시설 시험 구역">
-    <canvas id="yard" aria-label="4륜 물류 로버 주행 화면"></canvas>
+  <section class="stage" aria-label="Industrial test yard">
+    <canvas id="yard" aria-label="Cargo rover driving view"></canvas>
     <div class="stats">
-      <div><span>상태</span><output id="status">불러오는 중</output></div>
-      <div><span>속도</span><output id="speed">0 px/s</output></div>
+      <div><span>Status</span><output id="status">Loading</output></div>
+      <div><span>Speed</span><output id="speed">0 px/s</output></div>
     </div>
-    <div class="touch" aria-label="터치 주행 조작">
-      <div><button data-key="left" aria-label="좌회전">◀</button><button data-key="right" aria-label="우회전">▶</button></div>
-      <div><button data-key="reverse">후진</button><button data-key="forward">전진</button></div>
+    <div class="touch" aria-label="Touch driving controls">
+      <div><button data-key="left" aria-label="Turn Left">◀</button><button data-key="right" aria-label="Turn Right">▶</button></div>
+      <div><button data-key="reverse">Reverse</button><button data-key="forward">Forward</button></div>
     </div>
   </section>
-  <div class="view-controls" role="group" aria-label="렌더링 설정">
+  <div class="view-controls" role="group" aria-label="Rendering settings">
     <div class="view-control">
       <label for="spacing">Spacing <output id="spacingValue" for="spacing" aria-hidden="true">1.00</output></label>
       <input id="spacing" type="range" min="0.50" max="2.50" step="0.05" value="1.00"
-             title="레이어 사이 높이 간격">
+             title="Vertical spacing between layers">
     </div>
     <div class="view-control">
       <label for="squash">Squash <output id="squashValue" for="squash" aria-hidden="true">0.75</output></label>
       <input id="squash" type="range" min="0.45" max="1.00" step="0.01" value="0.75"
-             title="바닥의 세로 압축">
+             title="Vertical compression of the ground plane">
     </div>
     <div class="view-control">
       <label for="scale">Scale <output id="scaleValue" for="scale" aria-hidden="true">1.00×</output></label>
       <input id="scale" type="range" min="0.50" max="2.00" step="0.05" value="1.00"
-             title="기본 화면 배율 대비 확대">
+             title="Zoom relative to the default view">
     </div>
     <div class="view-actions">
-      <button type="button" id="materialLight" aria-pressed="true" title="오클루전·재질 반사·환경 반사광 비교">재질 조명</button>
-      <button type="button" id="detailNormal" aria-pressed="true" title="트레드와 도장 요철의 조명 반응 비교">디테일 노멀</button>
-      <button type="button" id="resetView">기본값</button>
+      <button type="button" id="materialLight" aria-pressed="true" title="Toggle occlusion, material reflections, and environmental highlights">Material Lighting</button>
+      <button type="button" id="detailNormal" aria-pressed="true" title="Toggle lighting response on tire tread and painted surfaces">Detail Normals</button>
+      <button type="button" id="resetView">Defaults</button>
     </div>
   </div>
-  <footer><div class="keys"><span><kbd>WASD / 방향키</kbd> 조작</span><span><kbd>Space</kbd> 정지</span><span><kbd>R</kbd> 초기화</span></div><span>차체 90 레이어 · 휠 44 레이어</span></footer>
+  <footer><div class="keys"><span><kbd>WASD / arrow keys</kbd> Move</span><span><kbd>Space</kbd> Stop</span><span><kbd>R</kbd> Reset</span></div><span>Body: 90 layers · Wheels: 44 layers</span></footer>
 </main>
 <script>
 "use strict";
@@ -785,8 +785,8 @@ function update(dt) {
   const follow = 1-Math.exp(-4.5*dt);
   camera.x += (robot.x*tracking-camera.x)*follow;
   camera.y += (robot.y*tracking-camera.y)*follow;
-  const message = robot.mode === "patrol" ? "순찰 중" : travel < -.002 ? "후진" :
-    travel > .002 ? "전진" : Math.abs(robot.steering) > .02 ? "앞바퀴 조향" : "정차";
+  const message = robot.mode === "patrol" ? "Patrolling" : travel < -.002 ? "Reverse" :
+    travel > .002 ? "Forward" : Math.abs(robot.steering) > .02 ? "Steering" : "Stopped";
   const value = Math.round(Math.abs(travel)/Math.max(.001,dt))+" px/s";
   if (status.value !== message) status.value = message;
   if (speed.value !== value) speed.value = value;
@@ -979,7 +979,7 @@ Promise.all([
   [bodyAtlas,tireAtlas]=images;
   start();
 }).catch(error=>{
-  status.value = "슬라이스 오류";
+  status.value = "Slice loading error";
   console.error(error);
 });
 </script>

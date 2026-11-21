@@ -16,7 +16,7 @@ async function splitFourViews(encoded) {
   const {width,height} = bitmap;
   if(width>8192||height>8192||width*height>16000000){
     bitmap.close();
-    throw new Error("4면 PNG의 크기를 1,600만 픽셀 이하로 줄여주세요.");
+    throw new Error("Choose a four-view PNG with no more than 16 million pixels.");
   }
   const surface = new OffscreenCanvas(width,height);
   const ctx = surface.getContext("2d",{willReadFrequently:true});
@@ -59,7 +59,7 @@ async function splitFourViews(encoded) {
     if (prior && left-prior.right<width*.007) prior.right=x;
     else bands.push({left,right:x});
   }
-  if (bands.length!==4) throw new Error("4면 시트에서 네 개의 실루엣을 찾을 수 없습니다.");
+  if (bands.length!==4) throw new Error("Could not find four silhouettes in the input sheet.");
   ctx.putImageData(rgba,0,0);
   return bands.map(({left,right})=>{
     let top=height,bottom=0;
@@ -227,7 +227,7 @@ function modelData(carved,width,length,layers,ratio,isWheel,physicalHeight) {
     }
     bounds.push(box);
   }
-  if (bounds.every(box=>box.right<0)) throw new Error("복원한 슬라이스에 형상이 없습니다.");
+  if (bounds.every(box=>box.right<0)) throw new Error("The reconstructed slices contain no geometry.");
   for(let y=0;y<length;y++) for(let x=0;x<width;x++) if(footprint[y*width+x]) contact.push(x,y);
   const normals=makeNormals(volume,bounds,width,length,layers,layerStep);
   const surface=bakeSurfaceData(volume,bounds,normals,width,length,layers,isWheel,ratio,layerStep);
@@ -727,7 +727,7 @@ async function readAntPart(part) {
   const bitmap=await createImageBitmap(unpackDataUrl(source));
   if(bitmap.width!==w*n||bitmap.height!==h){
     bitmap.close();
-    throw new Error("개미 메카 슬라이스 치수가 예상값과 다릅니다.");
+    throw new Error("The ant mech slice dimensions do not match the expected size.");
   }
   const canvas=new OffscreenCanvas(bitmap.width,bitmap.height);
   const ctx=canvas.getContext("2d",{willReadFrequently:true});

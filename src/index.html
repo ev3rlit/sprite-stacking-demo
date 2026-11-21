@@ -1,129 +1,129 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>4륜 물류 로버 · 런타임 스태킹</title>
+<title>Cargo Rover · Runtime Sprite Stacking</title>
 <!-- STYLES -->
 </head>
 <body>
 <main>
   <header>
-    <div class="brand"><span class="mark" aria-hidden="true"></span><h1 id="assetTitle">4륜 물류 로버</h1></div>
-    <div class="controls" role="group" aria-label="주행 모드">
-      <button id="patrol" aria-pressed="true">자동 순찰</button>
-      <button id="manual" aria-pressed="false">직접 조작</button>
-      <button id="reset">초기화</button>
+    <div class="brand"><span class="mark" aria-hidden="true"></span><h1 id="assetTitle">Cargo Rover</h1></div>
+    <div class="controls" role="group" aria-label="Drive mode">
+      <button id="patrol" aria-pressed="true">Auto Patrol</button>
+      <button id="manual" aria-pressed="false">Manual</button>
+      <button id="reset">Reset</button>
     </div>
   </header>
-  <section class="stage" aria-label="산업 시설 시험 구역">
-    <canvas id="yard" aria-label="4륜 물류 로버 주행 화면"></canvas>
+  <section class="stage" aria-label="Industrial test yard">
+    <canvas id="yard" aria-label="Cargo rover driving view"></canvas>
     <div class="stage-hud">
       <div class="stats">
-        <div><span>상태</span><output id="status">불러오는 중</output></div>
-        <div><span>속도</span><output id="speed">0 px/s</output></div>
+        <div><span>Status</span><output id="status">Loading</output></div>
+        <div><span>Speed</span><output id="speed">0 px/s</output></div>
       </div>
-      <div class="stats performance-stats" role="group" aria-label="렌더링 성능">
+      <div class="stats performance-stats" role="group" aria-label="Rendering performance">
         <div><span>FPS</span><output id="frameFps" aria-live="off">—</output></div>
-        <div><span>프레임타임</span><output id="frameTime" aria-live="off">— ms</output></div>
-        <div><span>렌더 CPU</span><output id="renderTime" aria-live="off">— ms</output></div>
+        <div><span>Frame Time</span><output id="frameTime" aria-live="off">— ms</output></div>
+        <div><span>Render CPU</span><output id="renderTime" aria-live="off">— ms</output></div>
       </div>
     </div>
-    <div class="touch" aria-label="터치 주행 조작">
-      <div><button data-key="left" aria-label="좌회전">◀</button><button data-key="right" aria-label="우회전">▶</button>
-        <button data-key="turnLeft" data-ant-turn hidden aria-label="몸체 왼쪽 회전">↶</button>
-        <button data-key="turnRight" data-ant-turn hidden aria-label="몸체 오른쪽 회전">↷</button></div>
-      <div><button data-key="reverse">후진</button><button data-key="forward">전진</button></div>
+    <div class="touch" aria-label="Touch driving controls">
+      <div><button data-key="left" aria-label="Turn Left">◀</button><button data-key="right" aria-label="Turn Right">▶</button>
+        <button data-key="turnLeft" data-ant-turn hidden aria-label="Rotate body left">↶</button>
+        <button data-key="turnRight" data-ant-turn hidden aria-label="Rotate body right">↷</button></div>
+      <div><button data-key="reverse">Reverse</button><button data-key="forward">Forward</button></div>
     </div>
   </section>
-  <div class="asset-controls" role="group" aria-label="차종 및 공용 렌더링">
-    <div class="vehicle-picker" id="vehiclePicker" role="group" aria-label="차종 선택">
+  <div class="asset-controls" role="group" aria-label="Vehicles and rendering">
+    <div class="vehicle-picker" id="vehiclePicker" role="group" aria-label="Vehicle selection">
       <button type="button" class="vehicle-option" data-vehicle="rover" aria-pressed="true">
-        <img class="vehicle-icon" src="../assets/icons/rover.png" alt="" width="48" height="34"><span>4륜 물류 로버</span>
+        <img class="vehicle-icon" src="../assets/icons/rover.png" alt="" width="48" height="34"><span>Cargo Rover</span>
       </button>
       <button type="button" class="vehicle-option" data-vehicle="inspection" aria-pressed="false">
-        <img class="vehicle-icon" src="../assets/icons/inspection.png" alt="" width="48" height="34"><span>산업용 점검 로봇</span>
+        <img class="vehicle-icon" src="../assets/icons/inspection.png" alt="" width="48" height="34"><span>Inspection Robot</span>
       </button>
       <button type="button" class="vehicle-option" data-vehicle="ant" aria-pressed="false">
-        <img class="vehicle-icon" src="../assets/icons/ant.png" alt="" width="48" height="34"><span>개미 메카</span>
+        <img class="vehicle-icon" src="../assets/icons/ant.png" alt="" width="48" height="34"><span>Ant Mech</span>
       </button>
       <button type="button" class="vehicle-option" data-vehicle="custom" aria-pressed="false" hidden>
-        <span class="vehicle-custom-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>사용자 4면 에셋</span>
+        <span class="vehicle-custom-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>Custom Four-View Asset</span>
       </button>
     </div>
-    <button id="openFourViews" type="button" title="윗면 · 왼쪽 옆면 · 앞면 · 뒷면의 한 줄 PNG">4면 PNG 열기</button>
+    <button id="openFourViews" type="button" title="PNG with top, left, front, and rear views in one row">Open Four-View PNG</button>
     <input id="fourViewFile" type="file" accept="image/png" hidden>
     <div class="ability-bar">
-      <button id="mobilityAbility" type="button" aria-pressed="false">부스트 · Shift</button>
-      <output id="abilityStatus">준비</output>
+      <button id="mobilityAbility" type="button" aria-pressed="false">Boost · Shift</button>
+      <output id="abilityStatus">Ready</output>
     </div>
-    <div class="techniques" role="group" aria-label="공용 렌더링">
-      <span class="global-label">공용 렌더링</span>
+    <div class="techniques" role="group" aria-label="Rendering">
+      <span class="global-label">Rendering</span>
       <button id="meshMode" type="button" aria-pressed="true">Marching Cubes</button>
-      <button id="multiViewMode" type="button" aria-pressed="true">다중 뷰 텍스처링</button>
-      <button id="materialLight" type="button" aria-pressed="true">재질 조명</button>
-      <button id="detailNormal" type="button" aria-pressed="true">디테일 노멀</button>
-      <button id="subpixelAA" type="button" aria-pressed="true" title="윤곽을 픽셀 내부 4개 지점에서 샘플링">서브픽셀 AA</button>
-      <button id="specularAA" type="button" aria-pressed="true" title="노멀 변화가 큰 곳의 반사 반짝임 완화">Specular AA</button>
+      <button id="multiViewMode" type="button" aria-pressed="true">Multi-View Texturing</button>
+      <button id="materialLight" type="button" aria-pressed="true">Material Lighting</button>
+      <button id="detailNormal" type="button" aria-pressed="true">Detail Normals</button>
+      <button id="subpixelAA" type="button" aria-pressed="true" title="Sample edge coverage at four points per pixel">Subpixel AA</button>
+      <button id="specularAA" type="button" aria-pressed="true" title="Reduce specular shimmer where normals vary rapidly">Specular AA</button>
     </div>
   </div>
   <div class="tuning-panels">
     <section class="tuning-panel" aria-labelledby="mobilityPanelTitle">
       <div class="tuning-heading">
-        <h2 id="mobilityPanelTitle">모빌리티</h2>
-        <button id="resetView" type="button" aria-label="모빌리티 기본값">기본값</button>
+        <h2 id="mobilityPanelTitle">Mobility</h2>
+        <button id="resetView" type="button" aria-label="Reset mobility settings">Defaults</button>
       </div>
       <div class="tuning-fields">
         <div class="view-control">
           <label for="spacing">Spacing <output id="spacingValue" for="spacing" aria-hidden="true">1.00</output></label>
-          <input id="spacing" type="range" min="0.50" max="2.50" step="0.05" value="1.00" title="선택한 모빌리티의 층 간격">
+          <input id="spacing" type="range" min="0.50" max="2.50" step="0.05" value="1.00" title="Layer spacing for the selected vehicle">
         </div>
         <div class="view-control">
           <label for="layerCount">Layers <output id="layerValue" for="layerCount" aria-hidden="true">90</output></label>
-          <input id="layerCount" type="range" min="30" max="120" step="1" value="90" title="차체 레이어 수">
+          <input id="layerCount" type="range" min="30" max="120" step="1" value="90" title="Body layer count">
         </div>
         <div class="view-control">
           <label for="textureScale">Texture Resolution <output id="textureValue" for="textureScale" aria-hidden="true">1.50×</output></label>
-          <input id="textureScale" type="range" min="0.75" max="2" step="0.25" value="1.5" title="슬라이스의 가로·세로 해상도">
+          <input id="textureScale" type="range" min="0.75" max="2" step="0.25" value="1.5" title="Horizontal slice resolution">
         </div>
       </div>
-      <div class="tuning-fields mobility-tuning" id="mobilityTuning" role="group" aria-label="차종별 조작 설정"></div>
+      <div class="tuning-fields mobility-tuning" id="mobilityTuning" role="group" aria-label="Vehicle-specific controls"></div>
       <div class="tuning-status">
-        <output id="pipelineStatus" aria-live="polite">4면 원본 준비 중…</output>
+        <output id="pipelineStatus" aria-live="polite">Preparing four-view input…</output>
         <span id="activeLayers"></span>
       </div>
     </section>
     <section class="tuning-panel" aria-labelledby="environmentPanelTitle">
       <div class="tuning-heading">
-        <h2 id="environmentPanelTitle">배경·프롭</h2>
-        <button id="resetEnvironment" type="button" aria-label="배경·프롭 기본값">기본값</button>
+        <h2 id="environmentPanelTitle">Environment &amp; Props</h2>
+        <button id="resetEnvironment" type="button" aria-label="Reset environment and prop settings">Defaults</button>
       </div>
       <div class="tuning-fields environment-fields">
         <div class="view-control">
-          <label for="propSpacing">프롭 Spacing <output id="propSpacingValue" for="propSpacing" aria-hidden="true">1.00</output></label>
-          <input id="propSpacing" type="range" min="0.50" max="2.50" step="0.05" value="1.00" title="캐니스터의 층 간격">
+          <label for="propSpacing">Prop Spacing <output id="propSpacingValue" for="propSpacing" aria-hidden="true">1.00</output></label>
+          <input id="propSpacing" type="range" min="0.50" max="2.50" step="0.05" value="1.00" title="Canister layer spacing">
         </div>
         <div class="view-control">
-          <label for="floorBrightness">배경 밝기 <output id="floorBrightnessValue" for="floorBrightness" aria-hidden="true">100%</output></label>
+          <label for="floorBrightness">Floor Brightness <output id="floorBrightnessValue" for="floorBrightness" aria-hidden="true">100%</output></label>
           <input id="floorBrightness" type="range" min="0.50" max="1.50" step="0.05" value="1.00">
         </div>
         <div class="view-control">
           <label for="squash">Squash <output id="squashValue" for="squash" aria-hidden="true">0.75</output></label>
-          <input id="squash" type="range" min="0.45" max="1.00" step="0.01" value="0.75" title="공용 카메라 각도">
+          <input id="squash" type="range" min="0.45" max="1.00" step="0.01" value="0.75" title="Shared camera angle">
         </div>
         <div class="view-control">
           <label for="scale">Scale <output id="scaleValue" for="scale" aria-hidden="true">1.00×</output></label>
-          <input id="scale" type="range" min="0.50" max="2.00" step="0.05" value="1.00" title="공용 화면 배율">
+          <input id="scale" type="range" min="0.50" max="2.00" step="0.05" value="1.00" title="Shared view scale">
         </div>
       </div>
       <div class="tuning-status">
-        <button type="button" id="supersample" aria-pressed="true">슈퍼샘플링 2×</button>
-        <output id="obstacleTelemetry">표지물 불러오는 중</output>
-        <button type="button" id="resetCanisters">표지물 초기화</button>
+        <button type="button" id="supersample" aria-pressed="true">Supersampling 2×</button>
+        <output id="obstacleTelemetry">Loading props</output>
+        <button type="button" id="resetCanisters">Reset Props</button>
       </div>
     </section>
   </div>
-  <footer><div class="keys" id="mobilityHelp">WASD / 방향키 주행 · Shift 부스트 · Space 정지</div><span>4면 원본 · 차체/휠 분리</span></footer>
+  <footer><div class="keys" id="mobilityHelp">WASD / arrow keys to drive · Shift to boost · Space to stop</div><span>Four-view assets · Separate body and wheels</span></footer>
 </main>
 <!-- SCRIPTS -->
 </body>

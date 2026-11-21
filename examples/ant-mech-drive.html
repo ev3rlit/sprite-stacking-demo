@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>6족 화물 메카 · 주행 데모</title>
+<title>Six-Legged Cargo Mech · Driving Demo</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,"Apple SD Gothic Neo",sans-serif;background:#151a1c;color:#ecece2;--lime:#d7e69e;--muted:#a7aca2;--line:#3b4546}
 *{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;place-items:center}
@@ -36,17 +36,17 @@ kbd.on{background:var(--lime);border-color:var(--lime);color:#212525}
 </head>
 <body>
 <main>
-<header><h1>6족 화물 메카</h1><div id="status">불러오는 중</div></header>
-<section id="stage" tabindex="0" aria-label="메카 주행 구역">
-<canvas id="world" aria-label="스프라이트 스택으로 그린 6족 메카 주행 화면"></canvas>
-<p id="load-error" hidden>메카 이미지를 불러오지 못했습니다. 페이지를 새로 열어 주세요.</p>
-<div id="touch" aria-label="터치 이동">
-<button type="button" data-code="KeyW" aria-label="위">↑</button><button type="button" data-code="KeyA" aria-label="왼쪽">←</button><button type="button" data-code="KeyS" aria-label="아래">↓</button><button type="button" data-code="KeyD" aria-label="오른쪽">→</button>
+<header><h1>Six-Legged Cargo Mech</h1><div id="status">Loading</div></header>
+<section id="stage" tabindex="0" aria-label="Mech driving area">
+<canvas id="world" aria-label="Sprite-stacked six-legged mech driving view"></canvas>
+<p id="load-error" hidden>Could not load the mech images. Reload the page.</p>
+<div id="touch" aria-label="Touch movement">
+<button type="button" data-code="KeyW" aria-label="Up">↑</button><button type="button" data-code="KeyA" aria-label="Left">←</button><button type="button" data-code="KeyS" aria-label="Down">↓</button><button type="button" data-code="KeyD" aria-label="Right">→</button>
 </div>
 </section>
 <footer>
-<div class="controls"><span><span class="keys"><kbd data-code="KeyW">W</kbd><kbd data-code="KeyA">A</kbd><kbd data-code="KeyS">S</kbd><kbd data-code="KeyD">D</kbd></span>이동</span><span>마우스 위치로 방향 전환</span></div>
-<button id="reset" type="button">위치 초기화</button>
+<div class="controls"><span><span class="keys"><kbd data-code="KeyW">W</kbd><kbd data-code="KeyA">A</kbd><kbd data-code="KeyS">S</kbd><kbd data-code="KeyD">D</kbd></span>Move</span><span>Aim with the mouse</span></div>
+<button id="reset" type="button">Reset Position</button>
 </footer>
 </main>
 <script>
@@ -179,7 +179,7 @@ function update(dt) {
   const frequency = clamp(stepSpeed / 33, 0.65, 2.15);
   if (state.gait > 0.015) state.phase = (state.phase + dt * frequency) % 1;
 
-  const statusText = linearSpeed > 4 ? "주행 중" : Math.abs(spin) > 0.2 ? "방향 전환 중" : "대기 중";
+  const statusText = linearSpeed > 4 ? "Moving" : Math.abs(spin) > 0.2 ? "Turning" : "Idle";
   if (status.textContent !== statusText) status.textContent = statusText;
   const c = Math.cos(state.turn), s = Math.sin(state.turn);
   return { vx: c * actualVX + s * actualVY, vy: -s * actualVX + c * actualVY, spin, frequency };
@@ -361,7 +361,7 @@ Promise.all(Object.values(art).map(loadStrip)).then(() => {
   requestAnimationFrame(frame);
 }).catch(error => {
   console.error(error);
-  status.textContent = "불러오기 실패";
+  status.textContent = "Loading failed";
   document.querySelector("#load-error").hidden = false;
 });
 </script>
