@@ -14,43 +14,22 @@ Drive a four-wheel cargo rover, an inspection robot, or a six-legged ant mech th
 
 ## How to Play
 
-[**Download the standalone HTML demo on GitHub**](https://github.com/ev3rlit/sprite-stacking-test/blob/main/dist/index.html)
+1. Sign into GitHub with an account that has access to this private repository. Open the [standalone HTML file](https://github.com/ev3rlit/sprite-stacking-test/blob/main/dist/index.html) and select **Download raw file**.
+2. Double-click the downloaded `index.html` to play in your browser. The demo runs offline after download.
 
-Sign in with a GitHub account that has access to this private repository. On the file page, choose **Download raw file**, then open the saved HTML in your browser. The file includes the game code, styles, worker, and images. It runs offline after download.
+If you prefer the terminal, run the command for your system from the folder where you saved the file.
 
-To download and launch it in one step, install the [GitHub CLI](https://cli.github.com/), then sign in once with `gh auth login --hostname github.com`.
-
-### macOS Terminal
+**macOS Terminal**
 
 ```sh
-demo_dir="$(mktemp -d "${TMPDIR:-/tmp}/sprite-stacking.XXXXXX")" &&
-  demo="$demo_dir/sprite-stacking-demo.html" &&
-  gh api --hostname github.com -H 'Accept: application/vnd.github.raw+json' \
-    'repos/ev3rlit/sprite-stacking-test/contents/dist/index.html?ref=main' > "$demo" &&
-  open "$demo"
+open ./index.html
 ```
 
-### Windows PowerShell
+**Windows PowerShell**
 
 ```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $token = gh auth token --hostname github.com
-    if ($LASTEXITCODE -ne 0 -or -not $token) { throw 'Run gh auth login --hostname github.com first.' }
-
-    $folder = Join-Path ([System.IO.Path]::GetTempPath()) ("sprite-stacking-" + [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path $folder | Out-Null
-    $demo = Join-Path $folder 'sprite-stacking-demo.html'
-    $url = 'https://api.github.com/repos/ev3rlit/sprite-stacking-test/contents/dist/index.html?ref=main'
-    Invoke-WebRequest -UseBasicParsing -Uri $url -Headers @{
-        Accept = 'application/vnd.github.raw+json'
-        Authorization = "Bearer $token"
-    } -OutFile $demo
-    Start-Process $demo
-}
+Invoke-Item .\index.html
 ```
-
-Both commands save a fresh copy in a temporary folder and open it with your system's HTML file association.
 
 ### Controls
 
