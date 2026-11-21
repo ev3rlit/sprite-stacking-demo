@@ -62,8 +62,10 @@ Select a model using the vehicle icons. Use **WASD** or the **arrow keys** to mo
 | Model | Special controls |
 | --- | --- |
 | Cargo Rover | **Shift** boosts. |
-| Inspection Robot | **E** scans nearby traffic cones. |
+| Inspection Robot | **E** activates the sensor scan. |
 | Ant Mech | Aim with the mouse. **Q / E** rotate the body, and **F** triggers a leap. |
+
+Cones and wet-floor signs can tip over. Plastic barriers slide when pushed, and concrete barriers act as fixed obstacles. **Reset Props** restores their positions.
 
 ## Runtime Workflow
 

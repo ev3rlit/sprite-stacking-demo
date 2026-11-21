@@ -20,7 +20,7 @@ const antialiasing = text('src/antialiasing.js');
 const frameTiming = text('src/frame-timing.js');
 const styles = text('src/styles.css');
 let template = text('src/index.html');
-const { fleet, trafficCone } = JSON.parse(text('src/asset-catalog.json'));
+const { fleet, props } = JSON.parse(text('src/asset-catalog.json'));
 
 const assets = Object.fromEntries(Object.entries(fleet).map(([key, input]) => {
   const body = input.body ? bytes(input.body) : null;
@@ -43,11 +43,13 @@ const assets = Object.fromEntries(Object.entries(fleet).map(([key, input]) => {
   return [key, asset];
 }));
 
-const conePng = bytes(trafficCone.source);
-const cone = { encoded: encode(conePng), version: sha([conePng, worker]) };
+const propsById = Object.fromEntries(Object.entries(props).map(([id, { source, ...settings }]) => {
+  const png = bytes(source);
+  return [id, { ...settings, encoded: encode(png), version: sha([png, worker, JSON.stringify(settings)]) }];
+}));
 
 const configuration = [
-  'const TRAFFIC_CONE=' + literal(cone) + ';',
+  'const PROP_ASSETS=' + literal(propsById) + ';',
   'const WORKER_SOURCE=' + literal(worker) + ';',
   'const ASSETS=' + literal(assets) + ';',
 ].join('\n');

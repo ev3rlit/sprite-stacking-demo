@@ -102,7 +102,30 @@
       "icon": "assets/icons/ant.png"
     }
   },
-  "trafficCone": {
-    "source": "assets/props/traffic-cone-4view.png"
+  "props": {
+    "traffic-cone": {
+      "source": "assets/props/traffic-cone-4view.png",
+      "height": 40,
+      "inverseMass": 1,
+      "tips": true
+    },
+    "wet-floor-sign": {
+      "source": "assets/props/wet-floor-sign-4view.png",
+      "height": 48,
+      "inverseMass": 1.25,
+      "tips": true
+    },
+    "plastic-barrier": {
+      "source": "assets/props/plastic-barrier-4view.png",
+      "height": 53,
+      "inverseMass": 0.25,
+      "tips": false
+    },
+    "concrete-barrier": {
+      "source": "assets/props/concrete-barrier-4view.png",
+      "height": 60,
+      "inverseMass": 0,
+      "tips": false
+    }
   }
 }

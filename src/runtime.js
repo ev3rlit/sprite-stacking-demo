@@ -734,7 +734,7 @@ function update(dt) {
   const rearDx = Math.cos(mid)*desiredTravel, rearDy = Math.sin(mid)*desiredTravel;
   const offsetX = (Math.cos(newHeading)-Math.cos(oldHeading))*CENTER_TO_REAR;
   const offsetY = (Math.sin(newHeading)-Math.sin(oldHeading))*CENTER_TO_REAR;
-  const contact=resolveConeContact(clamp(robot.x+rearDx+offsetX,-YARD_X+55,YARD_X-55),
+  const contact=resolvePropContact(clamp(robot.x+rearDx+offsetX,-YARD_X+55,YARD_X-55),
     clamp(robot.y+rearDy+offsetY,-YARD_Y+55,YARD_Y-55),newHeading,dt);
   const nextX=clamp(contact.x,-YARD_X+55,YARD_X-55),nextY=clamp(contact.y,-YARD_Y+55,YARD_Y-55);
   const travel=clamp((nextX-robot.x-offsetX)*Math.cos(mid)+(nextY-robot.y-offsetY)*Math.sin(mid),
@@ -868,18 +868,18 @@ function render() {
     Math.round(centerX - (floorOrigin.x + camera.x)*scale),
     Math.round(centerY - (floorOrigin.y*floorSquash + camera.y*view.squash)*scale),
     floorCanvas.width*scale,floorCanvas.height*scale*floorSquash);
-  const obstacles=visibleCones(centerX,centerY,scale,width,height);
-  for(const entry of obstacles)drawConeShadow(target,entry,scale);
+  const obstacles=visibleProps(centerX,centerY,scale,width,height);
+  for(const entry of obstacles)drawPropShadow(target,entry,scale);
   if(activeStack) drawAbilityEffect(target,centerX,centerY,scale,groundY);
   let obstacleIndex=0;
   while(obstacleIndex<obstacles.length && (!activeStack||obstacles[obstacleIndex].y<=groundY)) {
-    drawCone(target,obstacles[obstacleIndex++],scale);
+    drawYardProp(target,obstacles[obstacleIndex++],scale);
   }
   if(activeStack) target.drawImage(spriteCanvas,
     Math.round(centerX + (robot.x - camera.x)*scale - PIVOT_X*spriteScale),
     Math.round(groundY - PIVOT_Y*spriteScale),
     BUFFER*spriteScale,BUFFER_HEIGHT*spriteScale);
-  while(obstacleIndex<obstacles.length)drawCone(target,obstacles[obstacleIndex++],scale);
+  while(obstacleIndex<obstacles.length)drawYardProp(target,obstacles[obstacleIndex++],scale);
   if(activeStack?.ant) drawAntAim(target,width,height,size.density*samples);
   if(supersampling) {
     ctx.imageSmoothingEnabled=true;
@@ -1134,7 +1134,7 @@ function updateAnt(dt){
   if(!vx&&Math.abs(motion.vx)<.08)motion.vx=0;
   if(!vy&&Math.abs(motion.vy)<.08)motion.vy=0;
   const oldX=robot.x,oldY=robot.y;
-  const contact=resolveConeContact(clamp(robot.x+motion.vx*dt,-YARD_X+42,YARD_X-42),
+  const contact=resolvePropContact(clamp(robot.x+motion.vx*dt,-YARD_X+42,YARD_X-42),
     clamp(robot.y+motion.vy*dt,-YARD_Y+42,YARD_Y-42),robot.heading,dt);
   robot.x=clamp(contact.x,-YARD_X+42,YARD_X-42);
   robot.y=clamp(contact.y,-YARD_Y+42,YARD_Y-42);
@@ -1218,9 +1218,8 @@ function drawAntAim(target,width,height,scale){
   target.fillRect(x,y-gap-arm,scale,arm);
   target.fillRect(x,y+gap,scale,arm);
 }
-const CONE_SCALE=1/2;
-const CONE_RADIUS=9.4*CONE_SCALE;
-const CONE_UNIT=2;
+const PROP_ART_SCALE=.25;
+const PROP_LAYERS=40;
 const coneSpawns=[
   [36,257],[-29,269],[-91,246],[-150,273],[-220,247],
   [166,295],[212,312],[267,295],[319,312],
@@ -1230,85 +1229,109 @@ const coneSpawns=[
   [442,-220],[500,-257],[551,-223],[-489,-238],[-533,-202],
   [-493,301],[-539,346],[465,320],[526,349],[580,315],
 ];
-const cones=[];
-let coneModel=null;
-let coneLoadFailed=false;
+const propSpawns={
+  "traffic-cone":coneSpawns.map(([x,y],i)=>[x,y,(i*.79)%TAU]),
+  "wet-floor-sign":[[32,162,.14],[-182,110,-.35],[260,-96,1.1],[-550,-40,.32]],
+  "plastic-barrier":[[-68,155,0],[-143,155,0],[188,120,-.32],[530,125,Math.PI/2],[-300,-350,.35]],
+  "concrete-barrier":[[-65,339,0],[41,339,0],[147,339,0],[580,90,Math.PI/2],[-578,74,Math.PI/2],[9,-350,0]],
+};
+const yardProps=[];
+const propModels=new Map();
+let propLoadFailures=0;
 let obstacleHits=0;
 const obstacleTelemetry=document.getElementById("obstacleTelemetry");
+const propTypeCount=Object.keys(PROP_ASSETS).length;
 
 function updateObstacleTelemetry(){
-  const value=coneLoadFailed ? "Could not load traffic cones" : coneModel
-    ? "Cones "+cones.length+" · Collisions "+obstacleHits
-    : "Loading traffic cones";
+  const loaded=propModels.size;
+  const ready=loaded+propLoadFailures===propTypeCount;
+  const value=ready ? "Props "+yardProps.length+" · Models "+loaded+"/"+propTypeCount+" · Collisions "+obstacleHits
+    +(propLoadFailures?" · Load errors "+propLoadFailures:"") : "Loading yard props "+loaded+"/"+propTypeCount;
   if(obstacleTelemetry.value!==value)obstacleTelemetry.value=value;
 }
-function resetCones(){
-  cones.length=0;
+function resetProps(){
+  yardProps.length=0;
   obstacleHits=0;
-  for(const [i,[x,y]] of coneSpawns.entries()) {
-    const item={x,y,vx:0,vy:0,yaw:(i*.79)%TAU,tiltYaw:0,spin:0,tip:0,tipVelocity:0,
-      fallen:false,hop:0,rise:0,rollSpeed:0,airBounces:0,cooldown:0};
-    setConeDimensions(item);
-    cones.push(item);
+  for(const [type,spawns] of Object.entries(propSpawns)) {
+    const {inverseMass,tips}=PROP_ASSETS[type];
+    for(const [x,y,yaw] of spawns) {
+      const item={type,x,y,yaw,inverseMass,tips,vx:0,vy:0,tiltYaw:0,spin:0,tip:0,tipVelocity:0,
+        fallen:false,hop:0,rise:0,rollSpeed:0,airBounces:0,cooldown:0};
+      const model=propModels.get(type);
+      if(model)setPropModel(item,model);
+      yardProps.push(item);
+    }
   }
   updateObstacleTelemetry();
 }
-document.getElementById("resetCones").addEventListener("click",resetCones);
+document.getElementById("resetProps").addEventListener("click",resetProps);
 
-function setConeDimensions(item) {
-  const radius=coneModel
-    ? Math.max(coneModel.width,coneModel.length)/(2*CONE_UNIT)*CONE_SCALE : CONE_RADIUS;
-  const halfHeight=coneModel
-    ? (coneModel.layers-1)*coneModel.layerStep/(2*CONE_UNIT)*CONE_SCALE : CONE_HALF_HEIGHT;
-  item.radius=radius;
-  item.halfHeight=halfHeight;
-  item.balanceAngle=Math.atan2(radius,halfHeight);
-  item.inertia=radius*radius+halfHeight*halfHeight;
+function setPropModel(item,model) {
+  const halfWidth=model.width*PROP_ART_SCALE/2,halfLength=model.length*PROP_ART_SCALE/2;
+  item.model=model;
+  item.radius=Math.min(halfWidth,halfLength);
+  item.spine=Math.max(halfWidth,halfLength)-item.radius;
+  item.axis=halfWidth>=halfLength?0:Math.PI/2;
+  item.halfHeight=(model.layers-1)*model.layerStep*PROP_ART_SCALE/2;
+  item.balanceAngle=Math.atan2(item.radius,item.halfHeight);
+  item.inertia=item.radius*item.radius+item.halfHeight*item.halfHeight;
 }
 
-function loadCones(){
-  const url=URL.createObjectURL(new Blob([WORKER_SOURCE],{type:"text/javascript"}));
-  let coneWorker;
-  function complete(model,message){
-    coneWorker?.terminate();
-    if(model){
-      coneModel=model;
-      coneModel.surfaceVoxels=coneSurfaceVoxels(model);
-      for(const item of cones)setConeDimensions(item);
-    } else {
-      coneLoadFailed=true;
-      console.warn("Traffic cone: "+message);
+function buildProp(asset){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(new Blob([WORKER_SOURCE],{type:"text/javascript"}));
+    let propWorker;
+    try{
+      propWorker=new Worker(url);
+      propWorker.onmessage=({data})=>{
+        propWorker.terminate();
+        if(data.type==="ready")resolve(data.stack.body);
+        else reject(new Error(data.message));
+      };
+      propWorker.onerror=error=>{
+        propWorker.terminate();
+        reject(new Error(error.message));
+      };
+      propWorker.postMessage({type:"init",plates:{body:asset.encoded,wheel:null},version:asset.version,
+        profile:{body:{width:18,length:19,layers:asset.height},body_clearance:0,front_axle:0,rear_axle:0,half_track:0},
+        defaultLayers:PROP_LAYERS,defaultRatio:2,cache:true,prop:true});
+      propWorker.postMessage({type:"stack",sequence:1,layers:PROP_LAYERS,ratio:2,progressive:false});
+    } catch(error) {
+      propWorker?.terminate();
+      reject(error);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+}
+
+async function loadProps(){
+  for(const [type,asset] of Object.entries(PROP_ASSETS)){
+    try{
+      const model=await buildProp(asset);
+      if(asset.tips)model.surfaceVoxels=propSurfaceVoxels(model);
+      propModels.set(type,model);
+      for(const item of yardProps)if(item.type===type)setPropModel(item,model);
+    } catch(error){
+      propLoadFailures++;
+      console.warn(type+": "+error.message);
     }
     updateObstacleTelemetry();
   }
-  try{
-    coneWorker=new Worker(url);
-    coneWorker.onmessage=({data})=>{
-      if(data.type==="ready")complete(data.stack.body);
-      else if(data.type==="error")complete(null,data.message);
-    };
-    coneWorker.onerror=error=>complete(null,error.message);
-    coneWorker.postMessage({type:"init",plates:{body:TRAFFIC_CONE.encoded,wheel:null},version:TRAFFIC_CONE.version,
-      profile:{body:{width:18,length:19,layers:40},body_clearance:0,front_axle:0,rear_axle:0,half_track:0},
-      defaultLayers:40,defaultRatio:2,cache:true,prop:true});
-    coneWorker.postMessage({type:"stack",sequence:1,layers:40,ratio:2,progressive:false});
-  } catch(error) {
-    complete(null,error.message);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
 }
 
-// Approximate cone contact with a rounded footprint that extends as it tips.
-const CONE_HALF_HEIGHT=19.5*CONE_SCALE;
-const CONE_GRAVITY=350;
+const PROP_GRAVITY=350;
 const NOSE_SNAP=.00001;
-const TIP_SPEED_SCALE=1/Math.sqrt(CONE_SCALE);
+const TIP_SPEED_SCALE=Math.SQRT2;
 
-function coneCapsule(item){
-  const yaw=item.tiltYaw;
-  return {x:item.x,y:item.y,dx:-Math.sin(yaw),dy:Math.cos(yaw),
-    spine:Math.max(0,item.halfHeight-item.radius)*Math.sin(item.tip),radius:item.radius};
+function propCapsule(item){
+  if(item.tip>.0001){
+    const yaw=item.tiltYaw;
+    return {x:item.x,y:item.y,dx:-Math.sin(yaw),dy:Math.cos(yaw),
+      spine:Math.max(item.spine,(item.halfHeight-item.radius)*Math.sin(item.tip)),radius:item.radius};
+  }
+  const axis=item.yaw+item.axis;
+  return {x:item.x,y:item.y,dx:Math.cos(axis),dy:Math.sin(axis),spine:item.spine,radius:item.radius};
 }
 
 function capsuleContact(a,b){
@@ -1346,7 +1369,8 @@ function capsuleContact(a,b){
   return {nx:rx/gap,ny:ry/gap,overlap:limit-gap};
 }
 
-function impartConeTorque(item,nx,ny,impulse,tangent=0){
+function impartPropTorque(item,nx,ny,impulse,tangent=0){
+  if(!item.tips)return;
   item.spin=clamp(item.spin+tangent*.052,-11,11);
   if(item.fallen){
     item.rollSpeed+=impulse*(nx*Math.cos(item.tiltYaw)+ny*Math.sin(item.tiltYaw))/item.radius*.45;
@@ -1360,7 +1384,7 @@ function impartConeTorque(item,nx,ny,impulse,tangent=0){
   item.tipVelocity=clamp(item.tipVelocity+impulse*.064*alignment*TIP_SPEED_SCALE,-14*TIP_SPEED_SCALE,16*TIP_SPEED_SCALE);
 }
 
-function advanceCone(item,dt){
+function advanceProp(item,dt){
   item.cooldown=Math.max(0,item.cooldown-dt);
   const air=item.hop>0||item.rise>0;
   const oldTip=item.tip,oldYaw=item.tiltYaw;
@@ -1390,7 +1414,7 @@ function advanceCone(item,dt){
     item.vx*=damping;item.vy*=damping;
     if(item.tip>0||item.tipVelocity>0){
       const lever=item.halfHeight*Math.sin(item.tip)-item.radius*Math.cos(item.tip);
-      item.tipVelocity+=(CONE_GRAVITY*lever/item.inertia-item.tipVelocity*(item.tip>item.balanceAngle?1.25:2.2))*dt;
+      item.tipVelocity+=(PROP_GRAVITY*lever/item.inertia-item.tipVelocity*(item.tip>item.balanceAngle?1.25:2.2))*dt;
       item.tip+=item.tipVelocity*dt;
       if(item.tip<0){
         item.tip=0;
@@ -1402,12 +1426,12 @@ function advanceCone(item,dt){
         item.tip=Math.PI/2;
         item.tipVelocity=-impact*.19;
         item.fallen=true;
-        item.rise=Math.min(29/TIP_SPEED_SCALE,impact*3.4*CONE_SCALE);
+        item.rise=Math.min(29/TIP_SPEED_SCALE,impact*6.8*PROP_ART_SCALE);
         item.airBounces++;
         item.rollSpeed=(item.vx*Math.cos(item.tiltYaw)+item.vy*Math.sin(item.tiltYaw))/item.radius;
       }
     }
-    // Move the center around the supporting rim as the cone tips.
+    // Move the center around the supporting rim as the prop tips.
     if(item.tip!==oldTip) {
       const advance=item.halfHeight*(Math.sin(item.tip)-Math.sin(oldTip))+
         item.radius*(Math.cos(oldTip)-Math.cos(item.tip));
@@ -1423,7 +1447,7 @@ function advanceCone(item,dt){
   item.x+=item.vx*dt;
   item.y+=item.vy*dt;
   if(item.hop>0||item.rise>0){
-    item.rise-=CONE_GRAVITY*dt;
+    item.rise-=PROP_GRAVITY*dt;
     item.hop+=item.rise*dt;
     if(item.hop<=0){
       item.hop=0;
@@ -1435,28 +1459,36 @@ function advanceCone(item,dt){
   }
 }
 
-function physicsConeStep(dt){
-  for(const cone of cones)advanceCone(cone,dt);
-  const shapes=cones.map(coneCapsule);
-  for(let i=0;i<cones.length;i++)for(let j=i+1;j<cones.length;j++){
-    const a=cones[i],b=cones[j];
+function physicsPropStep(dt){
+  const placed=yardProps.filter(item=>item.model);
+  for(const item of placed){
+    if(item.inverseMass)advanceProp(item,dt);
+    else item.cooldown=Math.max(0,item.cooldown-dt);
+  }
+  const shapes=placed.map(propCapsule);
+  for(let i=0;i<placed.length;i++)for(let j=i+1;j<placed.length;j++){
+    const a=placed[i],b=placed[j],inverseMass=a.inverseMass+b.inverseMass;
+    if(!inverseMass)continue;
     const hit=capsuleContact(shapes[i],shapes[j]);
     if(!hit)continue;
     const {nx,ny,overlap}=hit;
-    const offset=overlap*.5;
-    a.x-=nx*offset;a.y-=ny*offset;b.x+=nx*offset;b.y+=ny*offset;
+    const offset=overlap/inverseMass;
+    a.x-=nx*offset*a.inverseMass;a.y-=ny*offset*a.inverseMass;
+    b.x+=nx*offset*b.inverseMass;b.y+=ny*offset*b.inverseMass;
     shapes[i].x=a.x;shapes[i].y=a.y;shapes[j].x=b.x;shapes[j].y=b.y;
     const closing=(a.vx-b.vx)*nx+(a.vy-b.vy)*ny;
     if(closing<=0)continue;
-    const impulse=closing*.61;
-    a.vx-=nx*impulse;a.vy-=ny*impulse;b.vx+=nx*impulse;b.vy+=ny*impulse;
+    const impulse=closing*1.22/inverseMass;
+    a.vx-=nx*impulse*a.inverseMass;a.vy-=ny*impulse*a.inverseMass;
+    b.vx+=nx*impulse*b.inverseMass;b.vy+=ny*impulse*b.inverseMass;
     if(impulse>9){
-      impartConeTorque(a,-nx,-ny,impulse*.62);
-      impartConeTorque(b,nx,ny,impulse*.8);
+      impartPropTorque(a,-nx,-ny,impulse*.62*a.inverseMass);
+      impartPropTorque(b,nx,ny,impulse*.8*b.inverseMass);
     }
   }
-  for(let i=0;i<cones.length;i++){
-    const item=cones[i],shape=shapes[i];
+  for(let i=0;i<placed.length;i++){
+    const item=placed[i],shape=shapes[i];
+    if(!item.inverseMass)continue;
     const ex=item.radius+Math.abs(shape.dx)*shape.spine;
     const ey=item.radius+Math.abs(shape.dy)*shape.spine;
     const x=clamp(item.x,-YARD_X+ex,YARD_X-ex),y=clamp(item.y,-YARD_Y+ey,YARD_Y-ey);
@@ -1465,10 +1497,10 @@ function physicsConeStep(dt){
   }
 }
 
-function tickCones(dt){
-  if(!coneModel||dt<=0)return;
+function tickProps(dt){
+  if(!propModels.size||dt<=0)return;
   const steps=Math.ceil(dt/(1/120));
-  for(let i=0;i<steps;i++)physicsConeStep(dt/steps);
+  for(let i=0;i<steps;i++)physicsPropStep(dt/steps);
 }
 
 function vehicleFootprint(){
@@ -1480,27 +1512,33 @@ function vehicleFootprint(){
   return {radius,spine:Math.max(0,chassis.length/(2*units)-radius),mass:selectedAsset.id==="inspection"?8:12};
 }
 
-function resolveConeContact(x,y,heading,dt){
-  if(!coneModel||!activeStack||activeStack.custom)return {x,y,loss:0};
+function resolvePropContact(x,y,heading,dt){
+  if(!propModels.size||!activeStack||activeStack.custom)return {x,y,loss:0};
   const {radius,spine,mass}=vehicleFootprint();
   const c=Math.cos(heading),s=Math.sin(heading);
   const vx=(x-robot.x)/Math.max(.001,dt),vy=(y-robot.y)/Math.max(.001,dt);
   let lostSpeed=0;
-  for(const item of cones){
-    const hit=capsuleContact({x,y,dx:c,dy:s,spine,radius},coneCapsule(item));
+  for(const item of yardProps){
+    if(!item.model)continue;
+    const hit=capsuleContact({x,y,dx:c,dy:s,spine,radius},propCapsule(item));
     if(!hit)continue;
     const {nx,ny,overlap}=hit;
-    const move=overlap/(1+1/mass);
-    item.x+=nx*move;item.y+=ny*move;x-=nx*move/mass;y-=ny*move/mass;
+    const inverseMass=item.inverseMass+1/mass;
+    const move=overlap/inverseMass;
+    item.x+=nx*move*item.inverseMass;item.y+=ny*move*item.inverseMass;
+    x-=nx*move/mass;y-=ny*move/mass;
     const closing=(vx-item.vx)*nx+(vy-item.vy)*ny;
     if(closing<=0)continue;
-    const impulse=closing*1.15/(1+1/mass);
-    item.vx+=nx*impulse;item.vy+=ny*impulse;
+    const impulse=closing*1.15/inverseMass;
+    const propImpulse=impulse*item.inverseMass;
+    item.vx+=nx*propImpulse;item.vy+=ny*propImpulse;
     lostSpeed+=impulse/mass;
     if(closing<9||item.cooldown>0)continue;
     const tangent=vx*ny-vy*nx;
-    impartConeTorque(item,nx,ny,impulse,tangent);
-    item.spin=clamp(item.spin+Math.sign((item.x-x)*c+(item.y-y)*s||1)*impulse*.015,-11,11);
+    if(item.tips){
+      impartPropTorque(item,nx,ny,propImpulse,tangent);
+      item.spin=clamp(item.spin+Math.sign((item.x-x)*c+(item.y-y)*s||1)*propImpulse*.015,-11,11);
+    }
     item.cooldown=.19;
     obstacleHits++;
     updateObstacleTelemetry();
@@ -1508,17 +1546,15 @@ function resolveConeContact(x,y,heading,dt){
   return {x,y,loss:Math.min(.6,lostSpeed/Math.max(1,Math.hypot(vx,vy)))};
 }
 
-const CONE_CANVAS_W=152,CONE_CENTER_X=76;
-const coneCache=new Map();
-const coneProjection=new Int32Array(CONE_CANVAS_W*100);
-let coneDepth,coneMask;
+const propCache=new Map();
+let propProjection=new Int32Array(0),propDepth,propMask;
 
-function conePose(item){
+function propPose(item){
   if(item.tip<.0001)return {yaw:item.yaw,tip:0,twist:0};
   return {yaw:item.tiltYaw,tip:item.tip,twist:wrap(item.yaw-item.tiltYaw)};
 }
 
-function coneSurfaceVoxels(model){
+function propSurfaceVoxels(model){
   const {width,length,layers,area,volume}=model;
   const hits=[];
   for(let z=0;z<layers;z++)for(let y=0;y<length;y++)for(let x=0;x<width;x++){
@@ -1565,31 +1601,33 @@ function drawTippedStack(part){
   }
 }
 
-function drawConeStamp(model,tile,yaw,tip,twist){
+function drawPropStamp(model,tile,yaw,tip,twist){
   const height=(model.layers-1)*model.layerStep;
-  const h=Math.max(144,Math.ceil(height*environmentView.propSpacing+102));
+  const padding=Math.ceil(Math.hypot(model.width,model.length,height)/2)+5;
+  const w=padding*2,h=Math.ceil(height*environmentView.propSpacing)+w;
   if(!tile.canvas){
     tile.canvas=document.createElement("canvas");
     tile.ctx=tile.canvas.getContext("2d");
   }
-  if(tile.canvas.width!==CONE_CANVAS_W||tile.canvas.height!==h){
-    tile.canvas.width=CONE_CANVAS_W;tile.canvas.height=h;
-    tile.image=tile.ctx.createImageData(CONE_CANVAS_W,h);
+  if(tile.canvas.width!==w||tile.canvas.height!==h){
+    tile.canvas.width=w;tile.canvas.height=h;
+    tile.image=tile.ctx.createImageData(w,h);
     tile.pixels=new Uint32Array(tile.image.data.buffer);
-    tile.groundY=h-54;
+    tile.groundY=h-padding;
   }
-  if(coneDepth?.length!==tile.pixels.length){
-    coneDepth=new Float32Array(tile.pixels.length);
-    coneMask=new Uint8Array(tile.pixels.length);
+  if(!propDepth||propDepth.length<tile.pixels.length){
+    propDepth=new Float32Array(tile.pixels.length);
+    propMask=new Uint8Array(tile.pixels.length);
   }
+  if(propProjection.length<tile.pixels.length)propProjection=new Int32Array(tile.pixels.length);
   const saved={w:BUFFER,h:BUFFER_HEIGHT,pixels:spritePixels,mask:bodyMask,depth,projection:projectedCells,aa:activeEdges};
   try{
-    BUFFER=CONE_CANVAS_W;BUFFER_HEIGHT=h;spritePixels=tile.pixels;
-    bodyMask=coneMask;depth=coneDepth;projectedCells=coneProjection;
-    spritePixels.fill(0);bodyMask.fill(0);depth.fill(-1);
+    BUFFER=w;BUFFER_HEIGHT=h;spritePixels=tile.pixels;
+    bodyMask=propMask;depth=propDepth;projectedCells=propProjection;
+    spritePixels.fill(0);bodyMask.fill(0,0,tile.pixels.length);depth.fill(-1,0,tile.pixels.length);
     beginSubpixelPass(propEdges);
     const support=Math.cos(tip)*height*.5+Math.sin(tip)*model.length*.47-height*.5;
-    const part={model,x:CONE_CENTER_X,y:tile.groundY,z:support,yaw,roll:tip||null,twist,spacing:environmentView.propSpacing};
+    const part={model,x:padding,y:tile.groundY,z:support,yaw,roll:tip||null,twist,spacing:environmentView.propSpacing};
     (meshEnabled?drawMesh:tip?drawTippedStack:drawPart)(part);
     if(!meshEnabled&&!tip)sampleStackEdges([part]);
     const outline=pack(29,39,31,216);
@@ -1604,54 +1642,55 @@ function drawConeStamp(model,tile,yaw,tip,twist){
   }
 }
 
-function coneStamp(item){
-  const {yaw,tip,twist}=conePose(item);
+function propStamp(item){
+  const {yaw,tip,twist}=propPose(item);
   // Animated bodies keep exact angles. Only settled poses use the shared atlas cache.
   const unsettled=item.fallen?Math.PI/2-item.tip>.009:item.tip>.0001;
   const moving=unsettled||Math.abs(item.tipVelocity)>.025||Math.abs(item.rollSpeed)>.02||Math.abs(item.spin)>.02;
-  if(moving)return drawConeStamp(coneModel,item.tile??={},yaw,tip,twist);
+  if(moving)return drawPropStamp(item.model,item.tile??={},yaw,tip,twist);
   item.tile=null;
   const quantize=(angle,bins)=>Math.round(angle*bins/TAU)*TAU/bins;
   const a=quantize(yaw,24),r=tip>.01?Math.PI/2:0,t=quantize(twist,48);
-  const key=[a,r,t,environmentView.propSpacing,view.squash,+meshEnabled,+multiViewEnabled,+detailNormal,+materialLight,+subpixelAAEnabled,+specularAAEnabled].join(":");
-  if(coneCache.has(key)){
-    const tile=coneCache.get(key);
-    coneCache.delete(key);coneCache.set(key,tile);
+  const key=[item.type,a,r,t,environmentView.propSpacing,view.squash,+meshEnabled,+multiViewEnabled,+detailNormal,+materialLight,+subpixelAAEnabled,+specularAAEnabled].join(":");
+  if(propCache.has(key)){
+    const tile=propCache.get(key);
+    propCache.delete(key);propCache.set(key,tile);
     return tile;
   }
-  const tile=drawConeStamp(coneModel,{},a,r,t);
-  coneCache.set(key,tile);
-  if(coneCache.size>85)coneCache.delete(coneCache.keys().next().value);
+  const tile=drawPropStamp(item.model,{},a,r,t);
+  propCache.set(key,tile);
+  if(propCache.size>85)propCache.delete(propCache.keys().next().value);
   return tile;
 }
 
-function visibleCones(centerX,centerY,scale,width,height){
-  if(!coneModel)return [];
-  const result=[], artScale=scale/CONE_UNIT*CONE_SCALE;
-  const visibleHeight=(coneModel.layers-1)*coneModel.layerStep*environmentView.propSpacing+54;
-  for(const item of cones){
+function visibleProps(centerX,centerY,scale,width,height){
+  const result=[];
+  for(const item of yardProps){
+    if(!item.model)continue;
     const x=centerX+(item.x-camera.x)*scale;
     const y=centerY+(item.y-camera.y)*view.squash*scale;
-    if(x+75*artScale<0||x-75*artScale>width||y+50*artScale<0||y-visibleHeight*artScale>height)continue;
+    const margin=(item.radius+item.spine+item.halfHeight)*scale;
+    const visibleHeight=margin+(item.halfHeight*2+item.hop)*scale*environmentView.propSpacing;
+    if(x+margin<0||x-margin>width||y+margin<0||y-visibleHeight>height)continue;
     result.push({item,x,y});
   }
   return result.sort((a,b)=>a.y-b.y);
 }
-function drawConeShadow(target,entry,scale){
-  const tip01=Math.sin(entry.item.tip);
-  const yaw=entry.item.tiltYaw;
-  const angle=tip01>.015?Math.atan2(Math.cos(yaw)*view.squash,-Math.sin(yaw)):0;
-  const scaled=scale*CONE_SCALE*(entry.item.radius/CONE_RADIUS);
-  target.fillStyle=`rgba(20,29,39,${.66-entry.item.hop*.075})`;
+function drawPropShadow(target,entry,scale){
+  const {item,x,y}=entry;
+  const shape=propCapsule(item);
+  const angle=Math.atan2(shape.dy*view.squash,shape.dx);
+  const shadowWidth=(item.radius+shape.spine)*scale;
+  const shadowDepth=item.radius*scale*view.squash;
+  target.fillStyle=`rgba(20,29,39,${Math.max(.1,.66-item.hop*.075)})`;
   target.beginPath();
-  target.ellipse(entry.x+3*scaled,entry.y+2*scaled,(8+tip01*9)*scaled,(4.8+tip01*1.5)*scaled*view.squash,
-    angle,0,TAU);
+  target.ellipse(x+2*scale,y+1.5*scale,shadowWidth,shadowDepth,angle,0,TAU);
   target.fill();
 }
-function drawCone(target,entry,scale){
-  const artScale=scale/CONE_UNIT*CONE_SCALE;
-  const tile=coneStamp(entry.item);
-  target.drawImage(tile.canvas,Math.round(entry.x-CONE_CENTER_X*artScale),
+function drawYardProp(target,entry,scale){
+  const artScale=scale*PROP_ART_SCALE;
+  const tile=propStamp(entry.item);
+  target.drawImage(tile.canvas,Math.round(entry.x-tile.canvas.width/2*artScale),
     Math.round(entry.y-tile.groundY*artScale-entry.item.hop*scale*environmentView.propSpacing),
     tile.canvas.width*artScale,tile.canvas.height*artScale);
 }
@@ -1851,8 +1890,8 @@ fourViewFile.addEventListener("change",()=>{
 
 function start() {
   makeYard();
-  resetCones();
-  loadCones();
+  resetProps();
+  loadProps();
   patrolButton.setAttribute("aria-pressed",String(robot.mode==="patrol"));
   manualButton.setAttribute("aria-pressed",String(robot.mode==="manual"));
   resize();
@@ -1862,7 +1901,7 @@ function start() {
   function frame(now) {
     const dt=clamp((now-previous)/1000,0,.04);
     previous=now;
-    tickCones(dt);
+    tickProps(dt);
     if(activeStack) update(dt);
     const renderStart=performance.now();
     render();
