@@ -2,6 +2,14 @@
 
 Drive a four-wheel cargo rover, an inspection robot, or a six-legged ant mech through a test yard. The browser reconstructs vehicles from four-view PNGs and lets you compare sprite stacking, Marching Cubes, and multi-view texturing in real time.
 
+## Four-View Atlases
+
+<p align="center">
+  <img src="assets/rover/fillet-rover-body-4-view.png" width="32%" alt="Cargo rover body four-view atlas" title="Cargo Rover">
+  <img src="assets/inspection/inspection-robot-body-4-view.png" width="32%" alt="Inspection robot body four-view atlas" title="Inspection Robot">
+  <img src="assets/ant/ant-mech-sprite-stacking-4view-v2.png" width="32%" alt="Assembled ant mech four-view reference" title="Ant Mech">
+</p>
+
 ## Model Turntables
 
 <p align="center">
