@@ -1,5 +1,5 @@
 {
-  "name": "sprite-stacking-test",
+  "name": "sprite-stacking-demo",
   "private": true,
   "type": "module",
   "engines": { "node": ">=20" },

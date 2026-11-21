@@ -1,4 +1,4 @@
-# Sprite Stacking Test
+# Sprite Stacking Demo
 
 Drive a four-wheel cargo rover, an inspection robot, or a six-legged ant mech through a test yard. The browser reconstructs vehicles from four-view PNGs and lets you compare sprite stacking, Marching Cubes, and multi-view texturing in real time.
 
@@ -19,16 +19,16 @@ Paste the command for your system to download the standalone HTML and open it in
 **macOS Terminal**
 
 ```sh
-demo="$(mktemp -d)/index.html" && curl -fL 'https://raw.githubusercontent.com/ev3rlit/sprite-stacking-test/refs/heads/main/dist/index.html' -o "$demo" && open "$demo"
+demo="$(mktemp -d)/index.html" && curl -fL 'https://raw.githubusercontent.com/ev3rlit/sprite-stacking-demo/refs/heads/main/dist/index.html' -o "$demo" && open "$demo"
 ```
 
 **Windows PowerShell**
 
 ```powershell
-& { $demo = Join-Path $env:TEMP 'sprite-stacking-demo.html'; curl.exe -fL 'https://raw.githubusercontent.com/ev3rlit/sprite-stacking-test/refs/heads/main/dist/index.html' -o $demo; if ($LASTEXITCODE -eq 0) { Start-Process $demo } }
+& { $demo = Join-Path $env:TEMP 'sprite-stacking-demo.html'; curl.exe -fL 'https://raw.githubusercontent.com/ev3rlit/sprite-stacking-demo/refs/heads/main/dist/index.html' -o $demo; if ($LASTEXITCODE -eq 0) { Start-Process $demo } }
 ```
 
-You can also open the [standalone HTML file on GitHub](https://github.com/ev3rlit/sprite-stacking-test/blob/main/dist/index.html), select **Download raw file**, and double-click the saved file.
+You can also open the [standalone HTML file on GitHub](https://github.com/ev3rlit/sprite-stacking-demo/blob/main/dist/index.html), select **Download raw file**, and double-click the saved file.
 
 ### Controls
 
