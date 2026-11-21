@@ -44,6 +44,12 @@ test('the fleet and yard props match the source PNG bytes', () => {
     for (const [key, part] of Object.entries(entry.parts ?? {})) {
       assert.deepEqual(Buffer.from(fleet[name].parts[key].source, 'base64'), read(part.source), part.source);
     }
+    for (const [key, { source, ...settings }] of Object.entries(entry.attachments ?? {})) {
+      const { encoded, version, ...embeddedSettings } = fleet[name].attachments[key];
+      assert.deepEqual(Buffer.from(encoded, 'base64'), read(source), source);
+      assert.deepEqual(embeddedSettings, settings);
+      assert.match(version, /^[a-f0-9]{20}$/);
+    }
   }
   const props = embedded('PROP_ASSETS');
   assert.deepEqual(Object.keys(props), Object.keys(catalog.props));

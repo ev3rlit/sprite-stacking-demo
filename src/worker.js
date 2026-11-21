@@ -244,7 +244,7 @@ async function readSource() {
 }
 async function buildStack(layers,ratio) {
   const [bodyViews,wheelViews]=await readSource();
-  if(isCustom){
+  if(isCustom&&!activeProfile.body.keepDimensions){
     const [top,side]=bodyViews;
     BASE_BODY_LENGTH=Math.min(200,Math.max(18,Math.round(BASE_BODY_LAYERS*side.width/side.height)));
     BASE_BODY_WIDTH=Math.min(132,Math.max(12,Math.round(BASE_BODY_LENGTH*top.width/top.height)));

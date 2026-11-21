@@ -18,6 +18,8 @@ const worker = text('src/worker.js');
 const runtime = text('src/runtime.js');
 const antialiasing = text('src/antialiasing.js');
 const frameTiming = text('src/frame-timing.js');
+const sceneScripts = ['tank-effects', 'tank', 'gpu-scene', 'renderer-comparison']
+  .map(name => text('src/' + name + '.js'));
 const styles = text('src/styles.css');
 let template = text('src/index.html');
 const { fleet, props } = JSON.parse(text('src/asset-catalog.json'));
@@ -32,7 +34,12 @@ const assets = Object.fromEntries(Object.entries(fleet).map(([key, input]) => {
     sources.push(source);
     return [partName, { ...part, source: encode(source) }];
   })) : undefined;
-  const { icon, ...fields } = input;
+  const { icon, attachments, ...fields } = input;
+  const attachedAssets = attachments && Object.fromEntries(Object.entries(attachments).map(([name, entry]) => {
+    const { source, ...settings } = entry;
+    const data = bytes(source);
+    return [name, { ...settings, encoded: encode(data), version: sha([worker, data, JSON.stringify(settings)]) }];
+  }));
   if (icon) {
     const src = 'src="../' + icon + '"';
     if (!template.includes(src)) throw new Error('Missing template icon: ' + icon);
@@ -40,6 +47,7 @@ const assets = Object.fromEntries(Object.entries(fleet).map(([key, input]) => {
   }
   const asset = { ...fields, body: encode(body), wheel: encode(wheel), version: sha(sources) };
   if (parts) asset.parts = parts;
+  if (attachedAssets) asset.attachments = attachedAssets;
   return [key, asset];
 }));
 
@@ -56,12 +64,12 @@ const configuration = [
 
 // Keep strict mode at the start of the inline script, before the generated data.
 const strict = '"use strict";\n';
-if (!runtime.startsWith(strict) || /<\/script[\s>]/i.test(runtime)) {
+if (!runtime.startsWith(strict) || [runtime, ...sceneScripts].some(source => /<\/script[\s>]/i.test(source))) {
   throw new Error('Runtime must start in strict mode and be safe to inline');
 }
 const output = template
   .replace('<!-- STYLES -->', () => '<style>\n' + styles + '</style>')
-  .replace('<!-- SCRIPTS -->', () => '<script>\n' + strict + configuration + '\n' + antialiasing + '\n' + frameTiming + '\n' + runtime.slice(strict.length) + '</script>');
+  .replace('<!-- SCRIPTS -->', () => '<script>\n' + strict + configuration + '\n' + antialiasing + '\n' + frameTiming + '\n' + runtime.slice(strict.length) + '\n' + sceneScripts.join('\n') + '\nstart();\n</script>');
 
 mkdirSync(resolve(root, 'dist'), { recursive: true });
 const file = resolve(root, 'dist/index.html');

@@ -123,10 +123,10 @@ let sprite, spritePixels, bodyMask, projectedCells, depth, castMask, contactMask
 let spriteTop = 0, spriteBottom = 0;
 
 function sizeSpriteBuffer() {
-  const topArt = Math.max((chassis.layers-1)*chassis.layerStep+(activeStack.ant?31*activeStack.textureRatio:BODY_CLEARANCE*activeStack.ratio),
+  const topArt = Math.max(tankBufferTop(),(chassis.layers-1)*chassis.layerStep+(activeStack.ant?31*activeStack.textureRatio:BODY_CLEARANCE*activeStack.ratio),
     tire?(tire.layers-1)*tire.layerStep:0);
   const lift = Math.ceil(topArt*view.spacing);
-  const radius = Math.ceil(Math.max(activeStack.ant?91*activeStack.textureRatio:0,Math.hypot(chassis.width,chassis.length)/2,
+  const radius = Math.ceil(Math.max(tankBufferRadius(),activeStack.ant?91*activeStack.textureRatio:0,Math.hypot(chassis.width,chassis.length)/2,
     tire?Math.hypot(REAR_AXLE,HALF_TRACK*ART_PIXELS_PER_UNIT)*activeStack.ratio+
       Math.hypot(tire.width,tire.length)/2:0))+4;
   const pivotX = radius+8;
@@ -263,6 +263,7 @@ function wheelSteer(side, steering) {
 }
 
 function poseParts(heading) {
+  if(isTank())return tankParts(heading);
   if(activeStack.ant)return antPoseParts(heading);
   const yaw = heading-Math.PI/2;
   const c = Math.cos(yaw), s = Math.sin(yaw);
@@ -369,7 +370,8 @@ function drawPart(part) {
         }
         const originalColor = volume[voxel];
         if (!originalColor) continue;
-        const color=(multiViewEnabled && model.viewColors[voxel])||originalColor;
+        const baseColor=(multiViewEnabled && model.viewColors[voxel])||originalColor;
+        const color=part.trackShift===undefined?baseColor:trackBeltColor(model,position%width,Math.floor(position/width),z*layerStep,part.trackShift,baseColor);
         const n = voxel*3;
         const nx = normals[n], ny = (flipY?-1:1)*normals[n+1], nz = normals[n+2];
         let shaded;
@@ -586,7 +588,8 @@ function drawMesh(part) {
         }
         const magnitude=Math.hypot(nx,ny,nz);
         const factor=magnitude>0?127/magnitude:1;
-        const color=projected||(multiViewEnabled&&model.viewColors[voxel])||model.volume[voxel];
+        const baseColor=projected||(multiViewEnabled&&model.viewColors[voxel])||model.volume[voxel];
+        const color=part.trackShift===undefined?baseColor:trackBeltColor(model,tx,ty,tz,part.trackShift,baseColor);
         spritePixels[p]=materialLight?materialPixel(color,model.material[voxel],
           (model.ambient[voxel]||255)/255,nx*factor,ny*factor*flipY,nz*factor,light,specularSpread(model,voxel)):color;
         depth[p]=z;
@@ -662,6 +665,7 @@ function drawRobot(heading) {
 }
 
 function resetRobot() {
+  if(isTank()){resetTank();return;}
   const phase = 1.21;
   const heading = Math.atan2(TRACK_Y*Math.cos(phase),-TRACK_X*Math.sin(phase));
   Object.assign(robot,{
@@ -688,6 +692,7 @@ function input(action) {
   return 0;
 }
 function update(dt) {
+  if(isTank()){updateTank(dt);return;}
   updateAbilities(dt);
   if(activeStack.ant){updateAnt(dt);return;}
   if(activeStack.custom){
@@ -839,7 +844,8 @@ function resize() {
 }
 
 function render() {
-  if(activeStack) drawRobot(robot.heading);
+  const gpuMode=sceneRendererMode==="gpu";
+  if(activeStack&&!gpuMode)drawRobot(robot.heading);
   const samples=supersampling ? 2 : 1;
   const width=canvas.width*samples, height=canvas.height*samples;
   const target=supersampling ? sampleCtx : ctx;
@@ -856,7 +862,7 @@ function render() {
   const minGround = 12*size.density*samples-(spriteTop-PIVOT_Y)*spriteScale;
   const maxGround = height-12*size.density*samples-(spriteBottom-PIVOT_Y)*spriteScale;
   const targetY=height*.57+offsetY;
-  const groundY=!activeStack ? targetY :
+  const groundY=!activeStack||gpuMode ? targetY :
     minGround<=maxGround ? clamp(targetY,minGround,maxGround) : (minGround+maxGround)/2;
   const centerY = groundY-offsetY;
   renderPose.x=(centerX+(robot.x-camera.x)*scale)/width;
@@ -871,16 +877,20 @@ function render() {
   const obstacles=visibleProps(centerX,centerY,scale,width,height);
   for(const entry of obstacles)drawPropShadow(target,entry,scale);
   if(activeStack) drawAbilityEffect(target,centerX,centerY,scale,groundY);
-  let obstacleIndex=0;
-  while(obstacleIndex<obstacles.length && (!activeStack||obstacles[obstacleIndex].y<=groundY)) {
-    drawYardProp(target,obstacles[obstacleIndex++],scale);
+  if(gpuMode){
+    if(activeStack)drawGpuVehicleShadow(target,centerX,groundY,scale);
+    gpuSceneRenderer.draw({obstacles,width,height,scale,spriteScale,centerX,groundY});
+  }else{
+    let obstacleIndex=0;
+    while(obstacleIndex<obstacles.length&&(!activeStack||obstacles[obstacleIndex].y<=groundY)){
+      drawYardProp(target,obstacles[obstacleIndex++],scale);
+    }
+    if(activeStack)target.drawImage(spriteCanvas,
+      Math.round(centerX+(robot.x-camera.x)*scale-PIVOT_X*spriteScale),
+      Math.round(groundY-PIVOT_Y*spriteScale),BUFFER*spriteScale,BUFFER_HEIGHT*spriteScale);
+    while(obstacleIndex<obstacles.length)drawYardProp(target,obstacles[obstacleIndex++],scale);
   }
-  if(activeStack) target.drawImage(spriteCanvas,
-    Math.round(centerX + (robot.x - camera.x)*scale - PIVOT_X*spriteScale),
-    Math.round(groundY - PIVOT_Y*spriteScale),
-    BUFFER*spriteScale,BUFFER_HEIGHT*spriteScale);
-  while(obstacleIndex<obstacles.length)drawYardProp(target,obstacles[obstacleIndex++],scale);
-  if(activeStack?.ant) drawAntAim(target,width,height,size.density*samples);
+  drawSceneEffects(target,gpuMode,width,height,centerX,centerY,scale,size.density*samples);
   if(supersampling) {
     ctx.imageSmoothingEnabled=true;
     ctx.imageSmoothingQuality="medium";
@@ -1277,7 +1287,7 @@ function setPropModel(item,model) {
   item.inertia=item.radius*item.radius+item.halfHeight*item.halfHeight;
 }
 
-function buildProp(asset){
+function buildProp(asset,ratio=2){
   return new Promise((resolve,reject)=>{
     const url=URL.createObjectURL(new Blob([WORKER_SOURCE],{type:"text/javascript"}));
     let propWorker;
@@ -1285,7 +1295,10 @@ function buildProp(asset){
       propWorker=new Worker(url);
       propWorker.onmessage=({data})=>{
         propWorker.terminate();
-        if(data.type==="ready")resolve(data.stack.body);
+        if(data.type==="ready"){
+          data.stack.body.benchmarkSource=data.source;
+          resolve(data.stack.body);
+        }
         else reject(new Error(data.message));
       };
       propWorker.onerror=error=>{
@@ -1293,9 +1306,9 @@ function buildProp(asset){
         reject(new Error(error.message));
       };
       propWorker.postMessage({type:"init",plates:{body:asset.encoded,wheel:null},version:asset.version,
-        profile:{body:{width:18,length:19,layers:asset.height},body_clearance:0,front_axle:0,rear_axle:0,half_track:0},
-        defaultLayers:PROP_LAYERS,defaultRatio:2,cache:true,prop:true});
-      propWorker.postMessage({type:"stack",sequence:1,layers:PROP_LAYERS,ratio:2,progressive:false});
+        profile:{body:{width:asset.width??18,length:asset.length??19,layers:asset.height,keepDimensions:asset.width!==undefined},body_clearance:0,front_axle:0,rear_axle:0,half_track:0},
+        defaultLayers:PROP_LAYERS,defaultRatio:ratio,cache:true,prop:true});
+      propWorker.postMessage({type:"stack",sequence:1,layers:PROP_LAYERS,ratio,progressive:false});
     } catch(error) {
       propWorker?.terminate();
       reject(error);
@@ -1504,6 +1517,7 @@ function tickProps(dt){
 }
 
 function vehicleFootprint(){
+  if(isTank())return {radius:28,spine:15,mass:13};
   const units=ART_PIXELS_PER_UNIT*activeStack.ratio;
   if(activeStack.ant)return {radius:29,spine:17,mass:5.5};
   const hullWidth=chassis.width/(2*units);
@@ -1513,7 +1527,7 @@ function vehicleFootprint(){
 }
 
 function resolvePropContact(x,y,heading,dt){
-  if(!propModels.size||!activeStack||activeStack.custom)return {x,y,loss:0};
+  if(!propModels.size||!activeStack||(activeStack.custom&&!isTank()))return {x,y,loss:0};
   const {radius,spine,mass}=vehicleFootprint();
   const c=Math.cos(heading),s=Math.sin(heading);
   const vx=(x-robot.x)/Math.max(.001,dt),vy=(y-robot.y)/Math.max(.001,dt);
@@ -1749,6 +1763,7 @@ function retainStack(stack) {
 }
 function reportStack(source,ms,persisted,preview) {
   pipelineStatus.dataset.source=source;
+  enableGpuWhenReady(preview);
   pipelineStatus.dataset.elapsed=String(Math.round(ms));
   pipelineStatus.dataset.persisted=String(persisted);
   const message=source==="memory" ? "Memory cache" : source==="disk" ? "Disk cache" : selectedAsset.parts ?
@@ -1809,12 +1824,13 @@ function switchAsset(asset) {
   patrolButton.textContent=asset.custom?"Auto-Rotate":"Auto Patrol";
   manualButton.textContent=asset.custom?"Stop":"Manual";
   document.querySelectorAll(".touch button[data-key='forward'],.touch button[data-key='reverse']")
-    .forEach(button=>{button.disabled=!!asset.custom;});
+    .forEach(button=>{button.disabled=!!asset.custom&&asset.id!=="tank";});
   status.value="Loading";
   speed.value="—";
   clearInputs();
   resetRobot();
   configureMobilityUI();
+  configureTankUI();
   try {
     const workerURL=URL.createObjectURL(new Blob([WORKER_SOURCE],{type:"text/javascript"}));
     worker=new Worker(workerURL);
@@ -1891,7 +1907,7 @@ fourViewFile.addEventListener("change",()=>{
 function start() {
   makeYard();
   resetProps();
-  loadProps();
+  measurePropBuild();
   patrolButton.setAttribute("aria-pressed",String(robot.mode==="patrol"));
   manualButton.setAttribute("aria-pressed",String(robot.mode==="manual"));
   resize();
@@ -1924,4 +1940,3 @@ for(const input of [layerSlider,textureSlider]) {
   });
   input.addEventListener("change",commitLayerCount);
 }
-start();

@@ -1,6 +1,6 @@
 # Sprite Stacking Demo
 
-Drive a four-wheel cargo rover, an inspection robot, or a six-legged ant mech through a test yard. The browser reconstructs vehicles from four-view PNGs and lets you compare sprite stacking, Marching Cubes, and multi-view texturing in real time.
+Drive a four-wheel cargo rover, an inspection robot, a six-legged ant mech, or a tracked tank miniature through a test yard. The browser reconstructs vehicles from four-view PNGs and lets you compare sprite stacking, Marching Cubes, and multi-view texturing in real time.
 
 ## Four-View Atlases
 
@@ -64,8 +64,9 @@ Select a model using the vehicle icons. Use **WASD** or the **arrow keys** to mo
 | Cargo Rover | **Shift** boosts. |
 | Inspection Robot | **E** activates the sensor scan. |
 | Ant Mech | Aim with the mouse. **Q / E** rotate the body, and **F** triggers a leap. |
+| Armored Miniature | **W / S** drive, **A / D** steer, the mouse rotates the turret, and **click / F** triggers a tracer and impact effect. |
 
-Cones and wet-floor signs can tip over. Plastic barriers slide when pushed, and concrete barriers act as fixed obstacles. **Reset Props** restores their positions.
+Cones and wet-floor signs can tip over. Plastic barriers slide when pushed, and concrete barriers act as fixed obstacles. Tank impacts can knock over cones and push plastic barriers. **Reset Props** restores their positions.
 
 ## Runtime Workflow
 
@@ -77,13 +78,19 @@ Cones and wet-floor signs can tip over. Plastic barriers slide when pushed, and 
 
 ### Reducing Layer Banding
 
-At some angles, the horizontal stack exposes slice edges. In the example above, bright colors from the front image repeat along adjacent slice edges, producing dotted bands. Marching Cubes connects the layers with a continuous surface. Multi-view texturing reprojects source colors onto that surface. You can toggle each technique independently in **Rendering**.
+At some angles, the horizontal stack exposes slice edges. In the example above, bright colors from the front image repeat along adjacent slice edges, producing dotted bands. Marching Cubes connects the layers with a continuous surface. Multi-view texturing reprojects source colors onto that surface. In **CPU Scene**, you can toggle each technique independently in **Rendering**.
 
 The before-and-after captures use the same angle, 120 layers, 2× texture resolution, and spacing of 1.00. The close-ups show the combined effect of both techniques.
 
+### CPU and GPU Comparison
+
+The demo switches to **GPU Scene** after the first vehicle finishes reconstructing when WebGL 2 is available. The GPU renderer reuses mesh and texture buffers and instances matching props, wheels, and other parts. Use **CPU Scene** to return to software rendering.
+
+Choose the 47- or 96-prop layout and select **Replay Prop Motion** to compare the two renderers from the same starting conditions. The comparison panel reports prop loading and GPU upload CPU time separately. GPU lighting and shadows use a simpler approximation.
+
 ### Anti-Aliasing and Performance
 
-The shared controls let you toggle 2× supersampling, Subpixel AA, and Specular AA independently. Supersampling renders at twice the screen resolution along each axis before downsampling. Subpixel AA samples coverage at four points per pixel along model and prop edges. Specular AA reduces shimmer from rapid normal changes under material lighting.
+Both scene renderers support 2× supersampling. Subpixel AA and Specular AA are available in CPU Scene. Supersampling renders at twice the screen resolution along each axis before downsampling. Subpixel AA samples coverage at four points per pixel along model and prop edges. Specular AA reduces shimmer from rapid normal changes under material lighting.
 
 The performance panel updates every 400 ms and shows FPS, frame time, and render CPU time. It starts a fresh measurement after you change an AA or supersampling setting.
 

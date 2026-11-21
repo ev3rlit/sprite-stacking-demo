@@ -17,7 +17,9 @@
     </div>
   </header>
   <section class="stage" aria-label="Industrial test yard">
-    <canvas id="yard" aria-label="Cargo rover driving view"></canvas>
+    <canvas id="yard" aria-label="Sprite stacking driving view"></canvas>
+    <canvas id="gpuSceneLayer" class="scene-overlay" hidden aria-hidden="true"></canvas>
+    <canvas id="sceneEffectsLayer" class="scene-overlay" hidden aria-hidden="true"></canvas>
     <div class="stage-hud">
       <div class="stats">
         <div><span>Status</span><output id="status">Loading</output></div>
@@ -36,6 +38,18 @@
       <div><button data-key="reverse">Reverse</button><button data-key="forward">Forward</button></div>
     </div>
   </section>
+  <div class="asset-controls renderer-comparison" role="group" aria-label="Yard renderer comparison">
+    <button type="button" id="cpuScene" aria-pressed="true">CPU Scene</button>
+    <button type="button" id="gpuScene" aria-pressed="false">GPU Scene</button>
+    <label>Layout
+      <select id="propLayout">
+        <option value="standard">Standard · 47</option>
+        <option value="dense">Dense · 96</option>
+      </select>
+    </label>
+    <button type="button" id="replayProps">Replay Prop Motion</button>
+    <output id="propBenchmarkStatus" aria-live="polite">Building prop models…</output>
+  </div>
   <div class="asset-controls" role="group" aria-label="Vehicles and rendering">
     <div class="vehicle-picker" id="vehiclePicker" role="group" aria-label="Vehicle selection">
       <button type="button" class="vehicle-option" data-vehicle="rover" aria-pressed="true">
@@ -46,6 +60,9 @@
       </button>
       <button type="button" class="vehicle-option" data-vehicle="ant" aria-pressed="false">
         <img class="vehicle-icon" src="../assets/icons/ant.png" alt="" width="48" height="34"><span>Ant Mech</span>
+      </button>
+      <button type="button" class="vehicle-option" data-vehicle="tank" aria-pressed="false">
+        <img class="vehicle-icon" src="../assets/icons/tank.png" alt="" width="48" height="34"><span>Armored Miniature</span>
       </button>
       <button type="button" class="vehicle-option" data-vehicle="custom" aria-pressed="false" hidden>
         <span class="vehicle-custom-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>Custom Four-View Asset</span>

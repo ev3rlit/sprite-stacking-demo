@@ -5,6 +5,6 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --check src/runtime.js && node --check src/antialiasing.js && node --check src/frame-timing.js && node --check src/worker.js && node --test tests/build.test.mjs"
+    "test": "node --check src/runtime.js && node --check src/antialiasing.js && node --check src/frame-timing.js && node --check src/worker.js && node --check src/tank.js && node --check src/tank-effects.js && node --check src/gpu-scene.js && node --check src/renderer-comparison.js && node --test tests/build.test.mjs"
   }
 }

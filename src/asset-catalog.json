@@ -100,6 +100,40 @@
         "half_track": 20
       },
       "icon": "assets/icons/ant.png"
+    },
+    "tank": {
+      "id": "tank",
+      "title": "Armored Miniature",
+      "body": "assets/tank/tank-hull-4view.png",
+      "wheel": null,
+      "custom": true,
+      "profile": {
+        "body": {
+          "width": 86,
+          "length": 166,
+          "layers": 49,
+          "keepDimensions": true
+        },
+        "body_clearance": 13,
+        "front_axle": 0,
+        "rear_axle": 0,
+        "half_track": 0
+      },
+      "attachments": {
+        "turret": {
+          "source": "assets/tank/tank-turret-4view.png",
+          "width": 60,
+          "length": 120,
+          "height": 33
+        },
+        "track": {
+          "source": "assets/tank/tank-track-4view.png",
+          "width": 23,
+          "length": 163,
+          "height": 34
+        }
+      },
+      "icon": "assets/icons/tank.png"
     }
   },
   "props": {
