@@ -60,6 +60,10 @@ The shared controls let you toggle 2× supersampling, Subpixel AA, and Specular 
 
 The performance panel updates every 400 ms and shows FPS, frame time, and render CPU time. It starts a fresh measurement after you change an AA or supersampling setting.
 
+## Credits
+
+This browser demo is built from four-view images created using Daniel White’s Sprite Stacking skill, which defines the orthographic layout and sprite-slicing workflow. [Upstream skill and reference](https://github.com/danielwh2/sprite-stacking)
+
 ## Build and Test
 
 Use Node.js 20 or later.
