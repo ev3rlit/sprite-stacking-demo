@@ -2,6 +2,39 @@
 
 4면 PNG에서 스택과 메시를 브라우저에서 생성하는 차량·개미 메카 데모입니다. 차종별 조작과 어빌리티, 캐니스터 충돌, 레이어·텍스처 해상도 설정, Marching Cubes 및 다중 뷰 텍스처링 비교를 포함합니다.
 
+## 모델 턴테이블
+
+<table>
+  <thead>
+    <tr>
+      <th scope="col">4륜 물류 로버</th>
+      <th scope="col">점검 로봇</th>
+      <th scope="col">개미 메카</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="33%" align="center"><img src="docs/media/rover-turntable.gif" width="352" alt="4륜 물류 로버의 360도 회전"></td>
+      <td width="33%" align="center"><img src="docs/media/inspection-turntable.gif" width="352" alt="점검 로봇의 360도 회전"></td>
+      <td width="33%" align="center"><img src="docs/media/ant-turntable.gif" width="352" alt="개미 메카의 360도 회전"></td>
+    </tr>
+  </tbody>
+</table>
+
+## 런타임 워크플로우
+
+![로버의 4면 원본, 실루엣을 교차해 생성한 슬라이스, 런타임 렌더링과 층줄 보정 전후 비교](docs/media/workflow.png)
+
+1. **4면 이미지 입력** — 브라우저가 [로버 차체 원본 PNG](assets/rover/fillet-rover-body-4-view.png)를 윗면, 왼쪽 옆면, 앞면, 뒷면으로 나눕니다. 바퀴는 별도 4면 이미지에서 복원하고 차축을 기준으로 조향하고 회전시킵니다.
+2. **런타임 복원과 캐싱** — Web Worker가 네 실루엣의 교집합을 계산해 복셀과 높이별 슬라이스를 만듭니다. 레이어 수와 텍스처 배율에 따라 격자가 달라지며, 동일한 설정은 메모리나 IndexedDB에 캐싱된 결과를 재사용합니다.
+3. **스택 또는 메시 렌더링** — 수평 슬라이스를 쌓아 그리거나, Marching Cubes로 복셀 경계를 이어 삼각형 표면을 만듭니다. 다중 뷰 텍스처링은 표면 방향과 원본 뷰에서의 가시성을 반영해 색을 고르고, 비슷한 색끼리 혼합합니다.
+
+### 층줄 보정
+
+수평 스택은 특정 각도에서 층 경계가 드러납니다. 위 사례에서는 앞면의 밝은 색이 인접한 층 가장자리에 반복되어 점선처럼 보입니다. Marching Cubes는 층 사이를 연속된 표면으로 잇고, 다중 뷰 텍스처링은 그 표면에 맞는 원본 색을 다시 투영합니다. 두 기능은 공용 렌더링 패널에서 각각 전환할 수 있습니다.
+
+위 전후 화면은 같은 각도, 120레이어, 텍스처 2×, Spacing 1.00에서 실제 데모를 캡처한 결과입니다. 확대 영역의 차이는 두 렌더링 기능을 함께 켰을 때의 결과입니다.
+
 ## 실행
 
 ```sh
