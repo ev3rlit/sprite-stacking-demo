@@ -1,7 +1,7 @@
 "use strict";
 const ART_PIXELS_PER_UNIT = 2;
 const TAU = Math.PI * 2;
-const DEFAULT_VIEW = {spacing:1, squash:.75, scale:1};
+const DEFAULT_VIEW = {spacing:1, squash:.75, scale:.5};
 const view = {...DEFAULT_VIEW};
 const viewSliders = Object.keys(view).map(key=>{
   const input = document.getElementById(key);

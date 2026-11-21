@@ -37,6 +37,14 @@ Drive a four-wheel cargo rover, an inspection robot, a six-legged ant mech, or a
 
 <p align="center">Cargo Rover · Inspection Robot · Ant Mech</p>
 
+## Tank Demo
+
+A 30-second GPU Scene capture at the default **0.50×** scale shows driving, turret rotation, tracer effects, and impacts that scatter yard props.
+
+[![30-second tank gameplay preview](docs/media/tank-demo.gif)](docs/media/tank-demo.mp4)
+
+[Open the original 60 FPS MP4](docs/media/tank-demo.mp4)
+
 ## How to Play
 
 Paste the command for your system to download the standalone HTML and open it in your browser. The demo runs offline after download.

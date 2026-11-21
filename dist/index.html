@@ -235,8 +235,8 @@ kbd{font:600 12px ui-monospace,monospace;color:var(--ink)}
           <input id="squash" type="range" min="0.45" max="1.00" step="0.01" value="0.75" title="Shared camera angle">
         </div>
         <div class="view-control">
-          <label for="scale">Scale <output id="scaleValue" for="scale" aria-hidden="true">1.00×</output></label>
-          <input id="scale" type="range" min="0.50" max="2.00" step="0.05" value="1.00" title="Shared view scale">
+          <label for="scale">Scale <output id="scaleValue" for="scale" aria-hidden="true">0.50×</output></label>
+          <input id="scale" type="range" min="0.50" max="2.00" step="0.05" value="0.50" title="Shared view scale">
         </div>
       </div>
       <div class="tuning-status">
@@ -457,7 +457,7 @@ function createFrameMeter(windowMs=400){
 
 const ART_PIXELS_PER_UNIT = 2;
 const TAU = Math.PI * 2;
-const DEFAULT_VIEW = {spacing:1, squash:.75, scale:1};
+const DEFAULT_VIEW = {spacing:1, squash:.75, scale:.5};
 const view = {...DEFAULT_VIEW};
 const viewSliders = Object.keys(view).map(key=>{
   const input = document.getElementById(key);
