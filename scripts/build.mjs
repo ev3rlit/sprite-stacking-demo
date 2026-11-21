@@ -20,7 +20,7 @@ const antialiasing = text('src/antialiasing.js');
 const frameTiming = text('src/frame-timing.js');
 const styles = text('src/styles.css');
 let template = text('src/index.html');
-const { fleet, props } = JSON.parse(text('src/asset-catalog.json'));
+const { fleet, trafficCone } = JSON.parse(text('src/asset-catalog.json'));
 
 const assets = Object.fromEntries(Object.entries(fleet).map(([key, input]) => {
   const body = input.body ? bytes(input.body) : null;
@@ -43,13 +43,11 @@ const assets = Object.fromEntries(Object.entries(fleet).map(([key, input]) => {
   return [key, asset];
 }));
 
-const canisters = props.map(({ id, source }) => {
-  const png = bytes(source);
-  return { id, encoded: encode(png), version: sha([png, worker]) };
-});
+const conePng = bytes(trafficCone.source);
+const cone = { encoded: encode(conePng), version: sha([conePng, worker]) };
 
 const configuration = [
-  'const CANISTER_ASSETS=' + literal(canisters) + ';',
+  'const TRAFFIC_CONE=' + literal(cone) + ';',
   'const WORKER_SOURCE=' + literal(worker) + ';',
   'const ASSETS=' + literal(assets) + ';',
 ].join('\n');
@@ -67,4 +65,4 @@ mkdirSync(resolve(root, 'dist'), { recursive: true });
 const file = resolve(root, 'dist/index.html');
 writeFileSync(file + '.tmp', output);
 renameSync(file + '.tmp', file);
-console.log('dist/index.html · ' + (Buffer.byteLength(output) / 1024 / 1024).toFixed(2) + ' MiB · ' + canisters.length + ' canisters');
+console.log('dist/index.html · ' + (Buffer.byteLength(output) / 1024 / 1024).toFixed(2) + ' MiB');

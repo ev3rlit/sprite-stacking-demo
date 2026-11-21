@@ -26,7 +26,7 @@ test('the standalone page has valid scripts and no external runtime dependencies
   assert.equal(embedded('WORKER_SOURCE'), read('src/worker.js').toString());
 });
 
-test('the fleet and all placed canisters match the source PNG bytes', () => {
+test('the fleet and traffic cone match the source PNG bytes', () => {
   const fleet = embedded('ASSETS');
   assert.deepEqual(Object.keys(fleet), Object.keys(catalog.fleet));
   for (const [name, entry] of Object.entries(catalog.fleet)) {
@@ -45,11 +45,8 @@ test('the fleet and all placed canisters match the source PNG bytes', () => {
       assert.deepEqual(Buffer.from(fleet[name].parts[key].source, 'base64'), read(part.source), part.source);
     }
   }
-  const props = embedded('CANISTER_ASSETS');
-  assert.deepEqual(props.map(({ id }) => id), catalog.props.map(({ id }) => id));
-  for (const [i, { source }] of catalog.props.entries()) {
-    assert.deepEqual(Buffer.from(props[i].encoded, 'base64'), read(source), source);
-  }
+  const cone = embedded('TRAFFIC_CONE');
+  assert.deepEqual(Buffer.from(cone.encoded, 'base64'), read(catalog.trafficCone.source));
 });
 
 

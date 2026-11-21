@@ -734,7 +734,7 @@ function update(dt) {
   const rearDx = Math.cos(mid)*desiredTravel, rearDy = Math.sin(mid)*desiredTravel;
   const offsetX = (Math.cos(newHeading)-Math.cos(oldHeading))*CENTER_TO_REAR;
   const offsetY = (Math.sin(newHeading)-Math.sin(oldHeading))*CENTER_TO_REAR;
-  const contact=resolveCanisterContact(clamp(robot.x+rearDx+offsetX,-YARD_X+55,YARD_X-55),
+  const contact=resolveConeContact(clamp(robot.x+rearDx+offsetX,-YARD_X+55,YARD_X-55),
     clamp(robot.y+rearDy+offsetY,-YARD_Y+55,YARD_Y-55),newHeading,dt);
   const nextX=clamp(contact.x,-YARD_X+55,YARD_X-55),nextY=clamp(contact.y,-YARD_Y+55,YARD_Y-55);
   const travel=clamp((nextX-robot.x-offsetX)*Math.cos(mid)+(nextY-robot.y-offsetY)*Math.sin(mid),
@@ -868,18 +868,18 @@ function render() {
     Math.round(centerX - (floorOrigin.x + camera.x)*scale),
     Math.round(centerY - (floorOrigin.y*floorSquash + camera.y*view.squash)*scale),
     floorCanvas.width*scale,floorCanvas.height*scale*floorSquash);
-  const obstacles=visibleCanisters(centerX,centerY,scale,width,height);
-  for(const entry of obstacles)drawCanisterShadow(target,entry,scale);
+  const obstacles=visibleCones(centerX,centerY,scale,width,height);
+  for(const entry of obstacles)drawConeShadow(target,entry,scale);
   if(activeStack) drawAbilityEffect(target,centerX,centerY,scale,groundY);
   let obstacleIndex=0;
   while(obstacleIndex<obstacles.length && (!activeStack||obstacles[obstacleIndex].y<=groundY)) {
-    drawCanister(target,obstacles[obstacleIndex++],scale);
+    drawCone(target,obstacles[obstacleIndex++],scale);
   }
   if(activeStack) target.drawImage(spriteCanvas,
     Math.round(centerX + (robot.x - camera.x)*scale - PIVOT_X*spriteScale),
     Math.round(groundY - PIVOT_Y*spriteScale),
     BUFFER*spriteScale,BUFFER_HEIGHT*spriteScale);
-  while(obstacleIndex<obstacles.length)drawCanister(target,obstacles[obstacleIndex++],scale);
+  while(obstacleIndex<obstacles.length)drawCone(target,obstacles[obstacleIndex++],scale);
   if(activeStack?.ant) drawAntAim(target,width,height,size.density*samples);
   if(supersampling) {
     ctx.imageSmoothingEnabled=true;
@@ -1134,7 +1134,7 @@ function updateAnt(dt){
   if(!vx&&Math.abs(motion.vx)<.08)motion.vx=0;
   if(!vy&&Math.abs(motion.vy)<.08)motion.vy=0;
   const oldX=robot.x,oldY=robot.y;
-  const contact=resolveCanisterContact(clamp(robot.x+motion.vx*dt,-YARD_X+42,YARD_X-42),
+  const contact=resolveConeContact(clamp(robot.x+motion.vx*dt,-YARD_X+42,YARD_X-42),
     clamp(robot.y+motion.vy*dt,-YARD_Y+42,YARD_Y-42),robot.heading,dt);
   robot.x=clamp(contact.x,-YARD_X+42,YARD_X-42);
   robot.y=clamp(contact.y,-YARD_Y+42,YARD_Y-42);
@@ -1218,10 +1218,10 @@ function drawAntAim(target,width,height,scale){
   target.fillRect(x,y-gap-arm,scale,arm);
   target.fillRect(x,y+gap,scale,arm);
 }
-const CANISTER_SCALE=1/2;
-const CANISTER_RADIUS=9.4*CANISTER_SCALE;
-const CANISTER_UNIT=2;
-const canisterSpawns=[
+const CONE_SCALE=1/2;
+const CONE_RADIUS=9.4*CONE_SCALE;
+const CONE_UNIT=2;
+const coneSpawns=[
   [36,257],[-29,269],[-91,246],[-150,273],[-220,247],
   [166,295],[212,312],[267,295],[319,312],
   [-315,174],[-339,117],[-310,57],[-338,-2],
@@ -1230,94 +1230,82 @@ const canisterSpawns=[
   [442,-220],[500,-257],[551,-223],[-489,-238],[-533,-202],
   [-493,301],[-539,346],[465,320],[526,349],[580,315],
 ];
-const canisters=[];
-const canisterModels=new Map();
-const unavailableCanisters=new Set();
-let canisterModel=null;
-const propModel=item=>canisterModels.get(item.type);
+const cones=[];
+let coneModel=null;
+let coneLoadFailed=false;
 let obstacleHits=0;
 const obstacleTelemetry=document.getElementById("obstacleTelemetry");
 
 function updateObstacleTelemetry(){
-  const total=CANISTER_ASSETS.length,loaded=canisterModels.size;
-  const types="Types "+(loaded===total?total:loaded+"/"+total);
-  const value="Props "+canisters.length+" · "+types+" · Collisions "+obstacleHits+
-    (unavailableCanisters.size?" · Load errors "+unavailableCanisters.size:"");
+  const value=coneLoadFailed ? "Could not load traffic cones" : coneModel
+    ? "Cones "+cones.length+" · Collisions "+obstacleHits
+    : "Loading traffic cones";
   if(obstacleTelemetry.value!==value)obstacleTelemetry.value=value;
 }
-function resetCanisters(){
-  canisters.length=0;
+function resetCones(){
+  cones.length=0;
   obstacleHits=0;
-  for(const [i,[x,y]] of canisterSpawns.entries()) {
-    const type=CANISTER_ASSETS[i%CANISTER_ASSETS.length].id;
-    const item={type,x,y,vx:0,vy:0,yaw:(i*.79)%TAU,tiltYaw:0,spin:0,tip:0,tipVelocity:0,
+  for(const [i,[x,y]] of coneSpawns.entries()) {
+    const item={x,y,vx:0,vy:0,yaw:(i*.79)%TAU,tiltYaw:0,spin:0,tip:0,tipVelocity:0,
       fallen:false,hop:0,rise:0,rollSpeed:0,airBounces:0,cooldown:0};
-    setCanisterDimensions(item,canisterModels.get(type));
-    canisters.push(item);
+    setConeDimensions(item);
+    cones.push(item);
   }
   updateObstacleTelemetry();
 }
-document.getElementById("resetCanisters").addEventListener("click",resetCanisters);
+document.getElementById("resetCones").addEventListener("click",resetCones);
 
-function setCanisterDimensions(item,model) {
-  const radius=model&&item.type!=="olive-canister"
-    ? Math.max(model.width,model.length)/(2*CANISTER_UNIT)*CANISTER_SCALE:CANISTER_RADIUS;
-  const halfHeight=model?(model.layers-1)*model.layerStep/(2*CANISTER_UNIT)*CANISTER_SCALE:CANISTER_HALF_HEIGHT;
+function setConeDimensions(item) {
+  const radius=coneModel
+    ? Math.max(coneModel.width,coneModel.length)/(2*CONE_UNIT)*CONE_SCALE : CONE_RADIUS;
+  const halfHeight=coneModel
+    ? (coneModel.layers-1)*coneModel.layerStep/(2*CONE_UNIT)*CONE_SCALE : CONE_HALF_HEIGHT;
   item.radius=radius;
   item.halfHeight=halfHeight;
   item.balanceAngle=Math.atan2(radius,halfHeight);
   item.inertia=radius*radius+halfHeight*halfHeight;
 }
 
-function loadCanisters(){
-  let next=0;
+function loadCones(){
   const url=URL.createObjectURL(new Blob([WORKER_SOURCE],{type:"text/javascript"}));
-  let inFlight=0;
-  function loadNext(){
-    while(inFlight<2&&next<CANISTER_ASSETS.length){
-      const asset=CANISTER_ASSETS[next++];
-      let worker;
-      try{worker=new Worker(url);}catch(error){
-        unavailableCanisters.add(asset.id);updateObstacleTelemetry();continue;
-      }
-      inFlight++;
-      function complete(model,message){
-        worker.terminate();
-        if(model){
-          model.surfaceVoxels=canisterSurfaceVoxels(model);
-          canisterModels.set(asset.id,model);
-          if(asset.id==="olive-canister")canisterModel=model;
-          for(const item of canisters)if(item.type===asset.id)setCanisterDimensions(item,model);
-        } else {
-          unavailableCanisters.add(asset.id);
-          console.warn("canisters "+asset.id+": "+message);
-        }
-        inFlight--;
-        updateObstacleTelemetry();
-        if(next<CANISTER_ASSETS.length)loadNext();
-        else if(!inFlight)URL.revokeObjectURL(url);
-      }
-      worker.onmessage=({data})=>{
-        if(data.type==="ready")complete(data.stack.body);
-        else if(data.type==="error")complete(null,data.message);
-      };
-      worker.onerror=error=>complete(null,error.message);
-      worker.postMessage({type:"init",plates:{body:asset.encoded,wheel:null},version:asset.version,
-        profile:{body:{width:18,length:19,layers:40},body_clearance:0,front_axle:0,rear_axle:0,half_track:0},
-        defaultLayers:40,defaultRatio:2,cache:true,prop:true});
-      worker.postMessage({type:"stack",sequence:1,layers:40,ratio:2,progressive:false});
+  let coneWorker;
+  function complete(model,message){
+    coneWorker?.terminate();
+    if(model){
+      coneModel=model;
+      coneModel.surfaceVoxels=coneSurfaceVoxels(model);
+      for(const item of cones)setConeDimensions(item);
+    } else {
+      coneLoadFailed=true;
+      console.warn("Traffic cone: "+message);
     }
+    updateObstacleTelemetry();
   }
-  loadNext();
+  try{
+    coneWorker=new Worker(url);
+    coneWorker.onmessage=({data})=>{
+      if(data.type==="ready")complete(data.stack.body);
+      else if(data.type==="error")complete(null,data.message);
+    };
+    coneWorker.onerror=error=>complete(null,error.message);
+    coneWorker.postMessage({type:"init",plates:{body:TRAFFIC_CONE.encoded,wheel:null},version:TRAFFIC_CONE.version,
+      profile:{body:{width:18,length:19,layers:40},body_clearance:0,front_axle:0,rear_axle:0,half_track:0},
+      defaultLayers:40,defaultRatio:2,cache:true,prop:true});
+    coneWorker.postMessage({type:"stack",sequence:1,layers:40,ratio:2,progressive:false});
+  } catch(error) {
+    complete(null,error.message);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
-// A cylindrical body rocks about its base rim, then rolls about its long axis.
-const CANISTER_HALF_HEIGHT=19.5*CANISTER_SCALE;
-const CANISTER_GRAVITY=350;
+// Approximate cone contact with a rounded footprint that extends as it tips.
+const CONE_HALF_HEIGHT=19.5*CONE_SCALE;
+const CONE_GRAVITY=350;
 const NOSE_SNAP=.00001;
-const TIP_SPEED_SCALE=1/Math.sqrt(CANISTER_SCALE);
+const TIP_SPEED_SCALE=1/Math.sqrt(CONE_SCALE);
 
-function canisterCapsule(item){
+function coneCapsule(item){
   const yaw=item.tiltYaw;
   return {x:item.x,y:item.y,dx:-Math.sin(yaw),dy:Math.cos(yaw),
     spine:Math.max(0,item.halfHeight-item.radius)*Math.sin(item.tip),radius:item.radius};
@@ -1358,7 +1346,7 @@ function capsuleContact(a,b){
   return {nx:rx/gap,ny:ry/gap,overlap:limit-gap};
 }
 
-function impartCanisterTorque(item,nx,ny,impulse,tangent=0){
+function impartConeTorque(item,nx,ny,impulse,tangent=0){
   item.spin=clamp(item.spin+tangent*.052,-11,11);
   if(item.fallen){
     item.rollSpeed+=impulse*(nx*Math.cos(item.tiltYaw)+ny*Math.sin(item.tiltYaw))/item.radius*.45;
@@ -1372,7 +1360,7 @@ function impartCanisterTorque(item,nx,ny,impulse,tangent=0){
   item.tipVelocity=clamp(item.tipVelocity+impulse*.064*alignment*TIP_SPEED_SCALE,-14*TIP_SPEED_SCALE,16*TIP_SPEED_SCALE);
 }
 
-function advanceCanister(item,dt){
+function advanceCone(item,dt){
   item.cooldown=Math.max(0,item.cooldown-dt);
   const air=item.hop>0||item.rise>0;
   const oldTip=item.tip,oldYaw=item.tiltYaw;
@@ -1402,7 +1390,7 @@ function advanceCanister(item,dt){
     item.vx*=damping;item.vy*=damping;
     if(item.tip>0||item.tipVelocity>0){
       const lever=item.halfHeight*Math.sin(item.tip)-item.radius*Math.cos(item.tip);
-      item.tipVelocity+=(CANISTER_GRAVITY*lever/item.inertia-item.tipVelocity*(item.tip>item.balanceAngle?1.25:2.2))*dt;
+      item.tipVelocity+=(CONE_GRAVITY*lever/item.inertia-item.tipVelocity*(item.tip>item.balanceAngle?1.25:2.2))*dt;
       item.tip+=item.tipVelocity*dt;
       if(item.tip<0){
         item.tip=0;
@@ -1414,12 +1402,12 @@ function advanceCanister(item,dt){
         item.tip=Math.PI/2;
         item.tipVelocity=-impact*.19;
         item.fallen=true;
-        item.rise=Math.min(29/TIP_SPEED_SCALE,impact*3.4*CANISTER_SCALE);
+        item.rise=Math.min(29/TIP_SPEED_SCALE,impact*3.4*CONE_SCALE);
         item.airBounces++;
         item.rollSpeed=(item.vx*Math.cos(item.tiltYaw)+item.vy*Math.sin(item.tiltYaw))/item.radius;
       }
     }
-    // Move the center around the supporting rim while the cylinder tips.
+    // Move the center around the supporting rim as the cone tips.
     if(item.tip!==oldTip) {
       const advance=item.halfHeight*(Math.sin(item.tip)-Math.sin(oldTip))+
         item.radius*(Math.cos(oldTip)-Math.cos(item.tip));
@@ -1435,7 +1423,7 @@ function advanceCanister(item,dt){
   item.x+=item.vx*dt;
   item.y+=item.vy*dt;
   if(item.hop>0||item.rise>0){
-    item.rise-=CANISTER_GRAVITY*dt;
+    item.rise-=CONE_GRAVITY*dt;
     item.hop+=item.rise*dt;
     if(item.hop<=0){
       item.hop=0;
@@ -1447,12 +1435,11 @@ function advanceCanister(item,dt){
   }
 }
 
-function physicsCanisterStep(dt){
-  for(const prop of canisters)if(propModel(prop))advanceCanister(prop,dt);
-  const shapes=canisters.map(prop=>propModel(prop)?canisterCapsule(prop):null);
-  for(let i=0;i<canisters.length;i++)for(let j=i+1;j<canisters.length;j++){
-    const a=canisters[i],b=canisters[j];
-    if(!shapes[i]||!shapes[j])continue;
+function physicsConeStep(dt){
+  for(const cone of cones)advanceCone(cone,dt);
+  const shapes=cones.map(coneCapsule);
+  for(let i=0;i<cones.length;i++)for(let j=i+1;j<cones.length;j++){
+    const a=cones[i],b=cones[j];
     const hit=capsuleContact(shapes[i],shapes[j]);
     if(!hit)continue;
     const {nx,ny,overlap}=hit;
@@ -1464,13 +1451,12 @@ function physicsCanisterStep(dt){
     const impulse=closing*.61;
     a.vx-=nx*impulse;a.vy-=ny*impulse;b.vx+=nx*impulse;b.vy+=ny*impulse;
     if(impulse>9){
-      impartCanisterTorque(a,-nx,-ny,impulse*.62);
-      impartCanisterTorque(b,nx,ny,impulse*.8);
+      impartConeTorque(a,-nx,-ny,impulse*.62);
+      impartConeTorque(b,nx,ny,impulse*.8);
     }
   }
-  for(let i=0;i<canisters.length;i++){
-    const item=canisters[i],shape=shapes[i];
-    if(!shape)continue;
+  for(let i=0;i<cones.length;i++){
+    const item=cones[i],shape=shapes[i];
     const ex=item.radius+Math.abs(shape.dx)*shape.spine;
     const ey=item.radius+Math.abs(shape.dy)*shape.spine;
     const x=clamp(item.x,-YARD_X+ex,YARD_X-ex),y=clamp(item.y,-YARD_Y+ey,YARD_Y-ey);
@@ -1479,10 +1465,10 @@ function physicsCanisterStep(dt){
   }
 }
 
-function tickCanisters(dt){
-  if(!canisterModels.size||dt<=0)return;
+function tickCones(dt){
+  if(!coneModel||dt<=0)return;
   const steps=Math.ceil(dt/(1/120));
-  for(let i=0;i<steps;i++)physicsCanisterStep(dt/steps);
+  for(let i=0;i<steps;i++)physicsConeStep(dt/steps);
 }
 
 function vehicleFootprint(){
@@ -1494,15 +1480,14 @@ function vehicleFootprint(){
   return {radius,spine:Math.max(0,chassis.length/(2*units)-radius),mass:selectedAsset.id==="inspection"?8:12};
 }
 
-function resolveCanisterContact(x,y,heading,dt){
-  if(!canisterModels.size||!activeStack||activeStack.custom)return {x,y,loss:0};
+function resolveConeContact(x,y,heading,dt){
+  if(!coneModel||!activeStack||activeStack.custom)return {x,y,loss:0};
   const {radius,spine,mass}=vehicleFootprint();
   const c=Math.cos(heading),s=Math.sin(heading);
   const vx=(x-robot.x)/Math.max(.001,dt),vy=(y-robot.y)/Math.max(.001,dt);
   let lostSpeed=0;
-  for(const item of canisters){
-    if(!propModel(item))continue;
-    const hit=capsuleContact({x,y,dx:c,dy:s,spine,radius},canisterCapsule(item));
+  for(const item of cones){
+    const hit=capsuleContact({x,y,dx:c,dy:s,spine,radius},coneCapsule(item));
     if(!hit)continue;
     const {nx,ny,overlap}=hit;
     const move=overlap/(1+1/mass);
@@ -1514,7 +1499,7 @@ function resolveCanisterContact(x,y,heading,dt){
     lostSpeed+=impulse/mass;
     if(closing<9||item.cooldown>0)continue;
     const tangent=vx*ny-vy*nx;
-    impartCanisterTorque(item,nx,ny,impulse,tangent);
+    impartConeTorque(item,nx,ny,impulse,tangent);
     item.spin=clamp(item.spin+Math.sign((item.x-x)*c+(item.y-y)*s||1)*impulse*.015,-11,11);
     item.cooldown=.19;
     obstacleHits++;
@@ -1523,17 +1508,17 @@ function resolveCanisterContact(x,y,heading,dt){
   return {x,y,loss:Math.min(.6,lostSpeed/Math.max(1,Math.hypot(vx,vy)))};
 }
 
-const CANISTER_CANVAS_W=152,CANISTER_CENTER_X=76;
-const canisterCache=new Map();
-const canisterProjection=new Int32Array(CANISTER_CANVAS_W*100);
-let canisterDepth,canisterMask;
+const CONE_CANVAS_W=152,CONE_CENTER_X=76;
+const coneCache=new Map();
+const coneProjection=new Int32Array(CONE_CANVAS_W*100);
+let coneDepth,coneMask;
 
-function canisterPose(item){
+function conePose(item){
   if(item.tip<.0001)return {yaw:item.yaw,tip:0,twist:0};
   return {yaw:item.tiltYaw,tip:item.tip,twist:wrap(item.yaw-item.tiltYaw)};
 }
 
-function canisterSurfaceVoxels(model){
+function coneSurfaceVoxels(model){
   const {width,length,layers,area,volume}=model;
   const hits=[];
   for(let z=0;z<layers;z++)for(let y=0;y<length;y++)for(let x=0;x<width;x++){
@@ -1580,31 +1565,31 @@ function drawTippedStack(part){
   }
 }
 
-function drawCanisterStamp(model,tile,yaw,tip,twist){
+function drawConeStamp(model,tile,yaw,tip,twist){
   const height=(model.layers-1)*model.layerStep;
   const h=Math.max(144,Math.ceil(height*environmentView.propSpacing+102));
   if(!tile.canvas){
     tile.canvas=document.createElement("canvas");
     tile.ctx=tile.canvas.getContext("2d");
   }
-  if(tile.canvas.width!==CANISTER_CANVAS_W||tile.canvas.height!==h){
-    tile.canvas.width=CANISTER_CANVAS_W;tile.canvas.height=h;
-    tile.image=tile.ctx.createImageData(CANISTER_CANVAS_W,h);
+  if(tile.canvas.width!==CONE_CANVAS_W||tile.canvas.height!==h){
+    tile.canvas.width=CONE_CANVAS_W;tile.canvas.height=h;
+    tile.image=tile.ctx.createImageData(CONE_CANVAS_W,h);
     tile.pixels=new Uint32Array(tile.image.data.buffer);
     tile.groundY=h-54;
   }
-  if(canisterDepth?.length!==tile.pixels.length){
-    canisterDepth=new Float32Array(tile.pixels.length);
-    canisterMask=new Uint8Array(tile.pixels.length);
+  if(coneDepth?.length!==tile.pixels.length){
+    coneDepth=new Float32Array(tile.pixels.length);
+    coneMask=new Uint8Array(tile.pixels.length);
   }
   const saved={w:BUFFER,h:BUFFER_HEIGHT,pixels:spritePixels,mask:bodyMask,depth,projection:projectedCells,aa:activeEdges};
   try{
-    BUFFER=CANISTER_CANVAS_W;BUFFER_HEIGHT=h;spritePixels=tile.pixels;
-    bodyMask=canisterMask;depth=canisterDepth;projectedCells=canisterProjection;
+    BUFFER=CONE_CANVAS_W;BUFFER_HEIGHT=h;spritePixels=tile.pixels;
+    bodyMask=coneMask;depth=coneDepth;projectedCells=coneProjection;
     spritePixels.fill(0);bodyMask.fill(0);depth.fill(-1);
     beginSubpixelPass(propEdges);
     const support=Math.cos(tip)*height*.5+Math.sin(tip)*model.length*.47-height*.5;
-    const part={model,x:CANISTER_CENTER_X,y:tile.groundY,z:support,yaw,roll:tip||null,twist,spacing:environmentView.propSpacing};
+    const part={model,x:CONE_CENTER_X,y:tile.groundY,z:support,yaw,roll:tip||null,twist,spacing:environmentView.propSpacing};
     (meshEnabled?drawMesh:tip?drawTippedStack:drawPart)(part);
     if(!meshEnabled&&!tip)sampleStackEdges([part]);
     const outline=pack(29,39,31,216);
@@ -1619,55 +1604,54 @@ function drawCanisterStamp(model,tile,yaw,tip,twist){
   }
 }
 
-function canisterStamp(item){
-  const model=propModel(item),{yaw,tip,twist}=canisterPose(item);
+function coneStamp(item){
+  const {yaw,tip,twist}=conePose(item);
   // Animated bodies keep exact angles. Only settled poses use the shared atlas cache.
   const unsettled=item.fallen?Math.PI/2-item.tip>.009:item.tip>.0001;
   const moving=unsettled||Math.abs(item.tipVelocity)>.025||Math.abs(item.rollSpeed)>.02||Math.abs(item.spin)>.02;
-  if(moving)return drawCanisterStamp(model,item.tile??={},yaw,tip,twist);
+  if(moving)return drawConeStamp(coneModel,item.tile??={},yaw,tip,twist);
   item.tile=null;
   const quantize=(angle,bins)=>Math.round(angle*bins/TAU)*TAU/bins;
   const a=quantize(yaw,24),r=tip>.01?Math.PI/2:0,t=quantize(twist,48);
-  const key=[item.type,a,r,t,environmentView.propSpacing,view.squash,+meshEnabled,+multiViewEnabled,+detailNormal,+materialLight,+subpixelAAEnabled,+specularAAEnabled].join(":");
-  if(canisterCache.has(key)){
-    const tile=canisterCache.get(key);
-    canisterCache.delete(key);canisterCache.set(key,tile);
+  const key=[a,r,t,environmentView.propSpacing,view.squash,+meshEnabled,+multiViewEnabled,+detailNormal,+materialLight,+subpixelAAEnabled,+specularAAEnabled].join(":");
+  if(coneCache.has(key)){
+    const tile=coneCache.get(key);
+    coneCache.delete(key);coneCache.set(key,tile);
     return tile;
   }
-  const tile=drawCanisterStamp(model,{},a,r,t);
-  canisterCache.set(key,tile);
-  if(canisterCache.size>85)canisterCache.delete(canisterCache.keys().next().value);
+  const tile=drawConeStamp(coneModel,{},a,r,t);
+  coneCache.set(key,tile);
+  if(coneCache.size>85)coneCache.delete(coneCache.keys().next().value);
   return tile;
 }
 
-function visibleCanisters(centerX,centerY,scale,width,height){
-  if(!canisterModels.size)return [];
-  const result=[], artScale=scale/CANISTER_UNIT*CANISTER_SCALE;
-  for(const item of canisters){
-    const model=propModel(item);
-    if(!model)continue;
+function visibleCones(centerX,centerY,scale,width,height){
+  if(!coneModel)return [];
+  const result=[], artScale=scale/CONE_UNIT*CONE_SCALE;
+  const visibleHeight=(coneModel.layers-1)*coneModel.layerStep*environmentView.propSpacing+54;
+  for(const item of cones){
     const x=centerX+(item.x-camera.x)*scale;
     const y=centerY+(item.y-camera.y)*view.squash*scale;
-    if(x+75*artScale<0||x-75*artScale>width||y+50*artScale<0||y-((model.layers-1)*model.layerStep*environmentView.propSpacing+54)*artScale>height)continue;
+    if(x+75*artScale<0||x-75*artScale>width||y+50*artScale<0||y-visibleHeight*artScale>height)continue;
     result.push({item,x,y});
   }
   return result.sort((a,b)=>a.y-b.y);
 }
-function drawCanisterShadow(target,entry,scale){
+function drawConeShadow(target,entry,scale){
   const tip01=Math.sin(entry.item.tip);
   const yaw=entry.item.tiltYaw;
   const angle=tip01>.015?Math.atan2(Math.cos(yaw)*view.squash,-Math.sin(yaw)):0;
-  const scaled=scale*CANISTER_SCALE*(entry.item.radius/CANISTER_RADIUS);
+  const scaled=scale*CONE_SCALE*(entry.item.radius/CONE_RADIUS);
   target.fillStyle=`rgba(20,29,39,${.66-entry.item.hop*.075})`;
   target.beginPath();
   target.ellipse(entry.x+3*scaled,entry.y+2*scaled,(8+tip01*9)*scaled,(4.8+tip01*1.5)*scaled*view.squash,
     angle,0,TAU);
   target.fill();
 }
-function drawCanister(target,entry,scale){
-  const artScale=scale/CANISTER_UNIT*CANISTER_SCALE;
-  const tile=canisterStamp(entry.item);
-  target.drawImage(tile.canvas,Math.round(entry.x-CANISTER_CENTER_X*artScale),
+function drawCone(target,entry,scale){
+  const artScale=scale/CONE_UNIT*CONE_SCALE;
+  const tile=coneStamp(entry.item);
+  target.drawImage(tile.canvas,Math.round(entry.x-CONE_CENTER_X*artScale),
     Math.round(entry.y-tile.groundY*artScale-entry.item.hop*scale*environmentView.propSpacing),
     tile.canvas.width*artScale,tile.canvas.height*artScale);
 }
@@ -1867,8 +1851,8 @@ fourViewFile.addEventListener("change",()=>{
 
 function start() {
   makeYard();
-  resetCanisters();
-  loadCanisters();
+  resetCones();
+  loadCones();
   patrolButton.setAttribute("aria-pressed",String(robot.mode==="patrol"));
   manualButton.setAttribute("aria-pressed",String(robot.mode==="manual"));
   resize();
@@ -1878,7 +1862,7 @@ function start() {
   function frame(now) {
     const dt=clamp((now-previous)/1000,0,.04);
     previous=now;
-    tickCanisters(dt);
+    tickCones(dt);
     if(activeStack) update(dt);
     const renderStart=performance.now();
     render();
