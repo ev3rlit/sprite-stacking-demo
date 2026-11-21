@@ -14,22 +14,21 @@ Drive a four-wheel cargo rover, an inspection robot, or a six-legged ant mech th
 
 ## How to Play
 
-1. Sign into GitHub with an account that has access to this private repository. Open the [standalone HTML file](https://github.com/ev3rlit/sprite-stacking-test/blob/main/dist/index.html) and select **Download raw file**.
-2. Double-click the downloaded `index.html` to play in your browser. The demo runs offline after download.
-
-If you prefer the terminal, run the command for your system from the folder where you saved the file.
+Paste the command for your system to download the standalone HTML and open it in your browser. The demo runs offline after download.
 
 **macOS Terminal**
 
 ```sh
-open ./index.html
+demo="$(mktemp -d)/index.html" && curl -fL 'https://raw.githubusercontent.com/ev3rlit/sprite-stacking-test/refs/heads/main/dist/index.html' -o "$demo" && open "$demo"
 ```
 
 **Windows PowerShell**
 
 ```powershell
-Invoke-Item .\index.html
+& { $demo = Join-Path $env:TEMP 'sprite-stacking-demo.html'; curl.exe -fL 'https://raw.githubusercontent.com/ev3rlit/sprite-stacking-test/refs/heads/main/dist/index.html' -o $demo; if ($LASTEXITCODE -eq 0) { Start-Process $demo } }
 ```
+
+You can also open the [standalone HTML file on GitHub](https://github.com/ev3rlit/sprite-stacking-test/blob/main/dist/index.html), select **Download raw file**, and double-click the saved file.
 
 ### Controls
 
