@@ -200,7 +200,7 @@ function partLighting(c, s, rc, rs, mirror) {
   };
 }
 
-function materialPixel(color, material, ambient, nx, ny, nz, lighting) {
+function materialPixel(color, material, ambient, nx, ny, nz, lighting, normalVariance=0) {
   const {roughness,metal,reflectance} = MATERIALS[material];
   const {light,eye,half,up,panel,eyeUp,eyePanel} = lighting;
   const nl = Math.max(0,nx*light[0]+ny*light[1]+nz*light[2]);
@@ -213,9 +213,7 @@ function materialPixel(color, material, ambient, nx, ny, nz, lighting) {
   const fresnel = edge2*edge2*edge*(.41-.31*roughness);
 
   // A GGX-shaped highlight, capped so single art pixels don't flare during rotation.
-  const a = roughness*roughness, a2 = a*a;
-  const d = nh*nh*(a2-1)+1;
-  const highlight = Math.min(2.4,a2/(d*d)*.63)*nl;
+  const highlight = ggxHighlight(roughness,nh,normalVariance)*nl;
   const ambientDiffuse = (.73+.16*normalUp)*ambient;
   const diffuse = (ambientDiffuse+.63*nl)*(1-metal*.73);
   const panelLobe = panelDot*panelDot;
@@ -355,7 +353,7 @@ function drawPart(part) {
         let shaded;
         if (lighting && (nx || ny || nz)) {
           const well = isWheel && z>layers*.56 && voxel%width<width*.45 ? .78 : 1;
-          shaded = materialPixel(color,material[voxel],(ambient[voxel]||255)/255*well,nx,ny,nz,lighting);
+          shaded = materialPixel(color,material[voxel],(ambient[voxel]||255)/255*well,nx,ny,nz,lighting,specularSpread(model,voxel));
         } else {
           const signedX = mirror ? -nx : nx;
           const light = signedX*lightX+ny*lightY+nz*lightZ;
@@ -522,15 +520,20 @@ function drawMesh(part) {
     screen[i+1]=cy+(x*s+rotatedY*c)*pitch-rotatedZ*spacing+(part.flexY??0)*blend;
     screen[i+2]=rotatedZ;
   }
+  const coverage=activeEdges?.coverage;
+  const fringe=coverage?.length ? .25 : 0;
   for(let k=0;k<triangles.length;k+=3) {
     const a=triangles[k]*3,b=triangles[k+1]*3,d=triangles[k+2]*3;
     const ax=screen[a],ay=screen[a+1],bx=screen[b],by=screen[b+1],dx=screen[d],dy=screen[d+1];
     const ux=bx-ax,uy=by-ay,vx=dx-ax,vy=dy-ay;
     const area=ux*vy-uy*vx;
     if(area*side*flipY<=.0001) continue;
-    const lx=Math.max(1,Math.ceil(Math.min(ax,bx,dx))),rx=Math.min(BUFFER-2,Math.floor(Math.max(ax,bx,dx)));
-    const ly=Math.max(1,Math.ceil(Math.min(ay,by,dy))),ry=Math.min(BUFFER_HEIGHT-2,Math.floor(Math.max(ay,by,dy)));
-    const inv=1/area, ub=vy*inv, vb=-uy*inv;
+    const lx=Math.max(1,Math.ceil(Math.min(ax,bx,dx)-fringe)),rx=Math.min(BUFFER-2,Math.floor(Math.max(ax,bx,dx)+fringe));
+    const ly=Math.max(1,Math.ceil(Math.min(ay,by,dy)-fringe)),ry=Math.min(BUFFER_HEIGHT-2,Math.floor(Math.max(ay,by,dy)+fringe));
+    const inv=1/area, ub=vy*inv, vb=-uy*inv, uyStep=-vx*inv,vyStep=ux*inv;
+    const uSpan=(Math.abs(ub)+Math.abs(uyStep))*.25;
+    const vSpan=(Math.abs(vb)+Math.abs(vyStep))*.25;
+    const wSpan=(Math.abs(ub+vb)+Math.abs(uyStep+vyStep))*.25;
     const zb=screen[b+2]-screen[a+2], zd=screen[d+2]-screen[a+2];
     for(let y=ly;y<=ry;y++){
       let p=y*BUFFER+lx;
@@ -538,6 +541,9 @@ function drawMesh(part) {
       let v=(ux*(y-ay)-uy*(lx-ax))*inv;
       for(let x=lx;x<=rx;x++,p++,u+=ub,v+=vb){
         const w=1-u-v;
+        if(coverage&&coverage[p]!==15&&u>=-uSpan&&v>=-vSpan&&w>=-wSpan){
+          coverage[p]|=u>=uSpan&&v>=vSpan&&w>=wSpan ? 15 : triangleCoverage(u,v,ub,vb,uyStep,vyStep);
+        }
         if(u<-.00001 || v<-.00001 || w<-.00001)continue;
         const z=screen[a+2]+u*zb+v*zd;
         if(depth[p]>=z)continue;
@@ -560,12 +566,24 @@ function drawMesh(part) {
         const factor=magnitude>0?127/magnitude:1;
         const color=projected||(multiViewEnabled&&model.viewColors[voxel])||model.volume[voxel];
         spritePixels[p]=materialLight?materialPixel(color,model.material[voxel],
-          (model.ambient[voxel]||255)/255,nx*factor,ny*factor*flipY,nz*factor,light):color;
+          (model.ambient[voxel]||255)/255,nx*factor,ny*factor*flipY,nz*factor,light,specularSpread(model,voxel)):color;
         depth[p]=z;
         bodyMask[p]=1;
       }
     }
   }
+}
+
+const subpixelAAButton=document.getElementById("subpixelAA");
+const specularAAButton=document.getElementById("specularAA");
+let subpixelAAEnabled=true,specularAAEnabled=true;
+for(const button of [subpixelAAButton,specularAAButton]){
+  button.addEventListener("click",()=>{
+    if(button===subpixelAAButton)subpixelAAEnabled=!subpixelAAEnabled;
+    else specularAAEnabled=!specularAAEnabled;
+    button.setAttribute("aria-pressed",String(button===subpixelAAButton?subpixelAAEnabled:specularAAEnabled));
+    lastAngle=null;
+  });
 }
 
 const meshButton=document.getElementById("meshMode");
@@ -598,15 +616,18 @@ function drawRobot(heading) {
   bodyMask.fill(0);
   depth.fill(-1);
   drawGroundShadow(parts);
+  beginSubpixelPass(vehicleEdges);
   for (const part of parts) (meshEnabled?drawMesh:drawPart)(part);
+  if(!meshEnabled)sampleStackEdges(parts);
   const outline = pack(27,29,25,220);
+  const antialiased=finishSubpixelPass(outline);
   spriteTop = BUFFER_HEIGHT;
   spriteBottom = 0;
   for (let y = 1; y < BUFFER_HEIGHT-1; y++) {
     let painted = false;
     for (let x = 1, i = y*BUFFER+1; x < BUFFER-1; x++,i++) {
       if (bodyMask[i]) painted = true;
-      else if (bodyMask[i-1] || bodyMask[i+1] || bodyMask[i-BUFFER] || bodyMask[i+BUFFER]) {
+      else if (!antialiased&&(bodyMask[i-1] || bodyMask[i+1] || bodyMask[i-BUFFER] || bodyMask[i+BUFFER])) {
         spritePixels[i] = outline;
       }
     }
@@ -1515,15 +1536,16 @@ function drawTippedStack(part){
     const x=col-halfX,y=row-halfY,z=layer*layerStep-halfZ;
     const tx=x*tc-y*ts,ty=x*ts+y*tc;
     const ry=ty*rc+z*rs,level=-ty*rs+z*rc+halfZ+baseZ;
-    const px=Math.round(cx+tx*c-ry*s);
-    const py=Math.round(cy+(tx*s+ry*c)*view.squash-level*spacing);
+    const screenX=cx+tx*c-ry*s,screenY=cy+(tx*s+ry*c)*view.squash-level*spacing;
+    const px=Math.round(screenX),py=Math.round(screenY);
+    splatCoverage(screenX,screenY);
     if(px<1||px>=BUFFER-2||py<1||py>=BUFFER_HEIGHT-2)continue;
     const anchor=py*BUFFER+px;
     if(depth[anchor]>=level&&depth[anchor+1]>=level&&depth[anchor+BUFFER]>=level&&depth[anchor+BUFFER+1]>=level)continue;
     const color=(multiViewEnabled&&model.viewColors[i])||model.volume[i];
     const n=i*3;
     const lit=materialLight?materialPixel(color,model.material[i],(model.ambient[i]||255)/255,
-      normals[n],normals[n+1],normals[n+2],rays):color;
+      normals[n],normals[n+1],normals[n+2],rays,specularSpread(model,i)):color;
     for(let a=0;a<2;a++)for(let b=0;b<2;b++){
       const dst=anchor+a*BUFFER+b;
       if(level<=depth[dst])continue;
@@ -1549,23 +1571,25 @@ function drawCanisterStamp(model,tile,yaw,tip,twist){
     canisterDepth=new Float32Array(tile.pixels.length);
     canisterMask=new Uint8Array(tile.pixels.length);
   }
-  const saved={w:BUFFER,h:BUFFER_HEIGHT,pixels:spritePixels,mask:bodyMask,depth,projection:projectedCells};
+  const saved={w:BUFFER,h:BUFFER_HEIGHT,pixels:spritePixels,mask:bodyMask,depth,projection:projectedCells,aa:activeEdges};
   try{
     BUFFER=CANISTER_CANVAS_W;BUFFER_HEIGHT=h;spritePixels=tile.pixels;
     bodyMask=canisterMask;depth=canisterDepth;projectedCells=canisterProjection;
     spritePixels.fill(0);bodyMask.fill(0);depth.fill(-1);
+    beginSubpixelPass(propEdges);
     const support=Math.cos(tip)*height*.5+Math.sin(tip)*model.length*.47-height*.5;
     const part={model,x:CANISTER_CENTER_X,y:tile.groundY,z:support,yaw,roll:tip||null,twist,spacing:environmentView.propSpacing};
     (meshEnabled?drawMesh:tip?drawTippedStack:drawPart)(part);
+    if(!meshEnabled&&!tip)sampleStackEdges([part]);
     const outline=pack(29,39,31,216);
-    for(let y=1;y<h-1;y++)for(let x=1,i=y*BUFFER+1;x<BUFFER-1;x++,i++){
+    if(!finishSubpixelPass(outline))for(let y=1;y<h-1;y++)for(let x=1,i=y*BUFFER+1;x<BUFFER-1;x++,i++){
       if(!bodyMask[i]&&(bodyMask[i-1]||bodyMask[i+1]||bodyMask[i-BUFFER]||bodyMask[i+BUFFER]))spritePixels[i]=outline;
     }
     tile.ctx.putImageData(tile.image,0,0);
     return tile;
   } finally {
     BUFFER=saved.w;BUFFER_HEIGHT=saved.h;spritePixels=saved.pixels;bodyMask=saved.mask;
-    depth=saved.depth;projectedCells=saved.projection;
+    depth=saved.depth;projectedCells=saved.projection;activeEdges=saved.aa;
   }
 }
 
@@ -1578,7 +1602,7 @@ function canisterStamp(item){
   item.tile=null;
   const quantize=(angle,bins)=>Math.round(angle*bins/TAU)*TAU/bins;
   const a=quantize(yaw,24),r=tip>.01?Math.PI/2:0,t=quantize(twist,48);
-  const key=[item.type,a,r,t,environmentView.propSpacing,view.squash,+meshEnabled,+multiViewEnabled,+detailNormal,+materialLight].join(":");
+  const key=[item.type,a,r,t,environmentView.propSpacing,view.squash,+meshEnabled,+multiViewEnabled,+detailNormal,+materialLight,+subpixelAAEnabled,+specularAAEnabled].join(":");
   if(canisterCache.has(key)){
     const tile=canisterCache.get(key);
     canisterCache.delete(key);canisterCache.set(key,tile);

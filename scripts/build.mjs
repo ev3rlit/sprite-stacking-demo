@@ -16,6 +16,7 @@ const literal = (data) => JSON.stringify(data).replace(/</g, '\\u003c');
 
 const worker = text('src/worker.js');
 const runtime = text('src/runtime.js');
+const antialiasing = text('src/antialiasing.js');
 const styles = text('src/styles.css');
 let template = text('src/index.html');
 const { fleet, props } = JSON.parse(text('src/asset-catalog.json'));
@@ -59,7 +60,7 @@ if (!runtime.startsWith(strict) || /<\/script[\s>]/i.test(runtime)) {
 }
 const output = template
   .replace('<!-- STYLES -->', () => '<style>\n' + styles + '</style>')
-  .replace('<!-- SCRIPTS -->', () => '<script>\n' + strict + configuration + '\n' + runtime.slice(strict.length) + '</script>');
+  .replace('<!-- SCRIPTS -->', () => '<script>\n' + strict + configuration + '\n' + antialiasing + '\n' + runtime.slice(strict.length) + '</script>');
 
 mkdirSync(resolve(root, 'dist'), { recursive: true });
 const file = resolve(root, 'dist/index.html');

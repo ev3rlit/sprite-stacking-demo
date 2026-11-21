@@ -175,6 +175,37 @@ function carve(views,width,length,layers,ratio,isWheel) {
   return {volume,views:[top,side,front,rear]};
 }
 
+// Estimate normal variance over the texel footprint before packing each model.
+function bakeSpecularVariance(volume,normals,detail,width,length,layers,material) {
+  const area=width*length;
+  const base=new Uint8Array(volume.length),fine=new Uint8Array(volume.length);
+  function variation(data,at,neighbors){
+    const n=at*3,x=data[n],y=data[n+1],z=data[n+2];
+    let sum=0,count=0;
+    for(const neighbor of neighbors){
+      if(neighbor<0||!volume[neighbor]||material[neighbor]!==material[at])continue;
+      const i=neighbor*3,nx=data[i],ny=data[i+1],nz=data[i+2];
+      if(!(nx||ny||nz))continue;
+      const dot=(x*nx+y*ny+z*nz)/16129;
+      if(dot<.18)continue;
+      sum+=Math.max(0,1-dot);
+      count++;
+    }
+    return count?Math.min(255,Math.round(sum/count*680)):0;
+  }
+  const neighbors=new Int32Array(6);
+  for(let z=0;z<layers;z++) for(let y=0;y<length;y++) for(let x=0;x<width;x++){
+    const at=z*area+y*width+x,n=at*3;
+    if(!(normals[n]||normals[n+1]||normals[n+2]))continue;
+    neighbors[0]=x>0?at-1:-1;neighbors[1]=x<width-1?at+1:-1;
+    neighbors[2]=y>0?at-width:-1;neighbors[3]=y<length-1?at+width:-1;
+    neighbors[4]=z>0?at-area:-1;neighbors[5]=z<layers-1?at+area:-1;
+    base[at]=variation(normals,at,neighbors);
+    fine[at]=Math.max(base[at],variation(detail,at,neighbors));
+  }
+  return {specularBase:base,specularDetail:fine};
+}
+
 function modelData(carved,width,length,layers,ratio,isWheel,physicalHeight) {
   const {volume,views}=carved;
   const area=width*length;
@@ -201,7 +232,8 @@ function modelData(carved,width,length,layers,ratio,isWheel,physicalHeight) {
   const normals=makeNormals(volume,bounds,width,length,layers,layerStep);
   const surface=bakeSurfaceData(volume,bounds,normals,width,length,layers,isWheel,ratio,layerStep);
   const detailedNormals=bakeDetailNormals(volume,bounds,normals,surface.material,width,length,layers,isWheel,layerStep);
-  const model={width,length,layers,area,volume,bounds,normals,detailedNormals,...surface,
+  const specular=bakeSpecularVariance(volume,normals,detailedNormals,width,length,layers,surface.material);
+  const model={width,length,layers,area,volume,bounds,normals,detailedNormals,...surface,...specular,
     layerStep,shadowStride,shadow:Int16Array.from(shadow),contact:Int16Array.from(contact)};
   return {...model,...projectViewColors(model,views),...marchingCubes(model,isWheel||isProp)};
 }

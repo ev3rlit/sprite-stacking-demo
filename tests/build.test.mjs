@@ -51,3 +51,17 @@ test('the fleet and all placed canisters match the source PNG bytes', () => {
     assert.deepEqual(Buffer.from(props[i].encoded, 'base64'), read(source), source);
   }
 });
+
+
+test('subpixel coverage samples a triangle edge instead of requiring a center hit', () => {
+  const evaluate = (expression) => vm.runInNewContext(read('src/antialiasing.js').toString() + '\n' + expression);
+  assert.equal(evaluate('triangleCoverage(.3,.3,.1,0,0,.1)'), 15);
+  assert.equal(evaluate('triangleCoverage(-.05,.3,.8,0,0,.1)'), 10);
+  assert.equal(evaluate('triangleCoverage(-.5,.3,.8,0,0,.1)'), 0);
+});
+
+test('specular variance widens and lowers a sharp highlight', () => {
+  const evaluate = (expression) => vm.runInNewContext(read('src/antialiasing.js').toString() + '\n' + expression);
+  assert.ok(evaluate('ggxHighlight(.21,1,.22) < ggxHighlight(.21,1,0)'));
+  assert.ok(evaluate('ggxHighlight(.21,.95,.22) > ggxHighlight(.21,.95,0)'));
+});

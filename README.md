@@ -11,6 +11,8 @@ npm test
 
 Node.js 20 이상이 필요합니다. `dist/index.html`을 브라우저에서 열면 실행됩니다. 이 파일에는 HTML, CSS, JavaScript, 변환 Worker, 데모가 사용하는 PNG가 들어 있어 오프라인에서도 열 수 있습니다.
 
+공용 렌더링에서 서브픽셀 AA와 Specular AA를 각각 켜고 끌 수 있습니다. 서브픽셀 AA는 모델과 프롭의 윤곽을 네 지점에서 샘플링하고, Specular AA는 재질 조명을 켰을 때 노멀 변화가 큰 반사를 완화합니다.
+
 ## 구조
 
 - `src/` 화면, 런타임, 변환 Worker, 에셋 카탈로그
