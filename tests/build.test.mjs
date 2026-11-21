@@ -65,3 +65,22 @@ test('specular variance widens and lowers a sharp highlight', () => {
   assert.ok(evaluate('ggxHighlight(.21,1,.22) < ggxHighlight(.21,1,0)'));
   assert.ok(evaluate('ggxHighlight(.21,.95,.22) > ggxHighlight(.21,.95,0)'));
 });
+
+
+test('the FPS meter measures genuine frame intervals and restarts on option changes', () => {
+  const source = read('src/frame-timing.js').toString();
+  const meter = vm.runInNewContext(source + '\ncreateFrameMeter(40)');
+  assert.equal(meter.sample(1000, 9), null);
+  assert.equal(meter.sample(1020, 4), null);
+  const sample = meter.sample(1040, 6);
+  assert.equal(sample.fps, 50);
+  assert.equal(sample.frameMs, 20);
+  assert.equal(sample.renderMs, 5);
+
+  meter.reset();
+  assert.equal(meter.sample(5050, 50), null);
+  const slow = meter.sample(5100, 12);
+  assert.equal(slow.fps, 20);
+  assert.equal(slow.frameMs, 50);
+  assert.equal(slow.renderMs, 12);
+});

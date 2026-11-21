@@ -84,6 +84,27 @@ const ctx = canvas.getContext("2d");
 const sampleCanvas=document.createElement("canvas");
 const sampleCtx=sampleCanvas.getContext("2d");
 const supersampleButton=document.getElementById("supersample");
+const frameMeter=createFrameMeter();
+const frameFps=document.getElementById("frameFps");
+const frameTime=document.getElementById("frameTime");
+const renderTime=document.getElementById("renderTime");
+
+function resetFrameMeter(){
+  frameMeter.reset();
+  frameFps.value="—";
+  frameTime.value="— ms";
+  renderTime.value="— ms";
+}
+
+function sampleFrameMeter(now,renderMs){
+  if(document.hidden||!activeStack)return;
+  const sample=frameMeter.sample(now,renderMs);
+  if(!sample)return;
+  frameFps.value=sample.fps.toFixed(0);
+  frameTime.value=sample.frameMs.toFixed(1)+" ms";
+  renderTime.value=sample.renderMs.toFixed(1)+" ms";
+}
+
 let supersampling=true;
 function syncSampling() {
   supersampleButton.setAttribute("aria-pressed",String(supersampling));
@@ -92,6 +113,7 @@ function syncSampling() {
 supersampleButton.addEventListener("click",()=>{
   supersampling=!supersampling;
   syncSampling();
+  resetFrameMeter();
 });
 syncSampling();
 const spriteCanvas = document.createElement("canvas");
@@ -582,6 +604,7 @@ for(const button of [subpixelAAButton,specularAAButton]){
     if(button===subpixelAAButton)subpixelAAEnabled=!subpixelAAEnabled;
     else specularAAEnabled=!specularAAEnabled;
     button.setAttribute("aria-pressed",String(button===subpixelAAButton?subpixelAAEnabled:specularAAEnabled));
+    resetFrameMeter();
     lastAngle=null;
   });
 }
@@ -907,7 +930,10 @@ window.addEventListener("keydown", event => {
 });
 window.addEventListener("keyup", event => heldKeys.delete(event.code));
 window.addEventListener("blur", clearInputs);
-document.addEventListener("visibilitychange", () => { if (document.hidden) clearInputs(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) clearInputs();
+  resetFrameMeter();
+});
 for (const button of touchButtons) {
   button.addEventListener("pointerdown", event => {
     if (event.button !== 0) return;
@@ -1674,6 +1700,7 @@ let activeStack=null, requestedLayers=DEFAULT_LAYERS, requestedRatio=DEFAULT_TEX
 function installStack(stack) {
   if(activeStack===stack) return;
   activeStack=stack;
+  resetFrameMeter();
   chassis=stack.body;
   tire=stack.wheel;
   rollMap=tire?new Int32Array(tire.layers*tire.length):null;
@@ -1853,7 +1880,9 @@ function start() {
     previous=now;
     tickCanisters(dt);
     if(activeStack) update(dt);
+    const renderStart=performance.now();
     render();
+    sampleFrameMeter(now,performance.now()-renderStart);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

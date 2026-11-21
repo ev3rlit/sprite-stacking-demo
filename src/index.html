@@ -18,9 +18,16 @@
   </header>
   <section class="stage" aria-label="산업 시설 시험 구역">
     <canvas id="yard" aria-label="4륜 물류 로버 주행 화면"></canvas>
-    <div class="stats">
-      <div><span>상태</span><output id="status">불러오는 중</output></div>
-      <div><span>속도</span><output id="speed">0 px/s</output></div>
+    <div class="stage-hud">
+      <div class="stats">
+        <div><span>상태</span><output id="status">불러오는 중</output></div>
+        <div><span>속도</span><output id="speed">0 px/s</output></div>
+      </div>
+      <div class="stats performance-stats" role="group" aria-label="렌더링 성능">
+        <div><span>FPS</span><output id="frameFps" aria-live="off">—</output></div>
+        <div><span>프레임타임</span><output id="frameTime" aria-live="off">— ms</output></div>
+        <div><span>렌더 CPU</span><output id="renderTime" aria-live="off">— ms</output></div>
+      </div>
     </div>
     <div class="touch" aria-label="터치 주행 조작">
       <div><button data-key="left" aria-label="좌회전">◀</button><button data-key="right" aria-label="우회전">▶</button>

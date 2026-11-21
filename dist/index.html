@@ -21,11 +21,17 @@ button:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
 .controls{gap:6px}
 .stage{position:relative;height:clamp(360px,64svh,680px);border:1px solid #606257;border-radius:7px;overflow:hidden;background:#303a47}
 canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
-.stats{position:absolute;top:12px;left:12px;gap:0;pointer-events:none;background:#172130ef;border:1px solid #62738a;border-radius:4px}
+.stage-hud{position:absolute;inset:12px 12px auto;display:flex;justify-content:space-between;align-items:flex-start;gap:6px;pointer-events:none}
+.stats{gap:0;background:#172130ef;border:1px solid #62738a;border-radius:4px}
 .stats div{padding:6px 10px;min-width:76px}
 .stats div+div{border-left:1px solid #405064}
 .stats span{display:block;font-size:10px;color:var(--muted);line-height:1.25}
 .stats output{font:600 13px ui-monospace,monospace;color:var(--lime)}
+.performance-stats div{min-width:72px}
+@media(max-width:460px){
+  .stage-hud{flex-direction:column}
+  .performance-stats div{min-width:65px;padding-inline:8px}
+}
 footer{justify-content:space-between;flex-wrap:wrap;padding-top:12px;color:var(--muted)}
 .keys{display:flex;align-items:center;flex-wrap:wrap;gap:6px 15px}
 kbd{font:600 12px ui-monospace,monospace;color:var(--ink)}
@@ -110,9 +116,16 @@ kbd{font:600 12px ui-monospace,monospace;color:var(--ink)}
   </header>
   <section class="stage" aria-label="산업 시설 시험 구역">
     <canvas id="yard" aria-label="4륜 물류 로버 주행 화면"></canvas>
-    <div class="stats">
-      <div><span>상태</span><output id="status">불러오는 중</output></div>
-      <div><span>속도</span><output id="speed">0 px/s</output></div>
+    <div class="stage-hud">
+      <div class="stats">
+        <div><span>상태</span><output id="status">불러오는 중</output></div>
+        <div><span>속도</span><output id="speed">0 px/s</output></div>
+      </div>
+      <div class="stats performance-stats" role="group" aria-label="렌더링 성능">
+        <div><span>FPS</span><output id="frameFps" aria-live="off">—</output></div>
+        <div><span>프레임타임</span><output id="frameTime" aria-live="off">— ms</output></div>
+        <div><span>렌더 CPU</span><output id="renderTime" aria-live="off">— ms</output></div>
+      </div>
     </div>
     <div class="touch" aria-label="터치 주행 조작">
       <div><button data-key="left" aria-label="좌회전">◀</button><button data-key="right" aria-label="우회전">▶</button>
@@ -387,6 +400,36 @@ function ggxHighlight(roughness,normalDot,variance){
   return Math.min(2.4/(1+4*variance),a2/(d*d)*.63);
 }
 
+function createFrameMeter(windowMs=400){
+  let previous=null,frames=0,elapsed=0,renderTotal=0;
+  return {
+    reset(){
+      previous=null;
+      frames=0;
+      elapsed=0;
+      renderTotal=0;
+    },
+    sample(now,renderMs){
+      if(previous===null){
+        previous=now;
+        return null;
+      }
+      const interval=now-previous;
+      previous=now;
+      if(interval<=0)return null;
+      frames++;
+      elapsed+=interval;
+      renderTotal+=renderMs;
+      if(elapsed<windowMs)return null;
+      const sample={fps:1000*frames/elapsed,frameMs:elapsed/frames,renderMs:renderTotal/frames};
+      frames=0;
+      elapsed=0;
+      renderTotal=0;
+      return sample;
+    },
+  };
+}
+
 const ART_PIXELS_PER_UNIT = 2;
 const TAU = Math.PI * 2;
 const DEFAULT_VIEW = {spacing:1, squash:.75, scale:1};
@@ -472,6 +515,27 @@ const ctx = canvas.getContext("2d");
 const sampleCanvas=document.createElement("canvas");
 const sampleCtx=sampleCanvas.getContext("2d");
 const supersampleButton=document.getElementById("supersample");
+const frameMeter=createFrameMeter();
+const frameFps=document.getElementById("frameFps");
+const frameTime=document.getElementById("frameTime");
+const renderTime=document.getElementById("renderTime");
+
+function resetFrameMeter(){
+  frameMeter.reset();
+  frameFps.value="—";
+  frameTime.value="— ms";
+  renderTime.value="— ms";
+}
+
+function sampleFrameMeter(now,renderMs){
+  if(document.hidden||!activeStack)return;
+  const sample=frameMeter.sample(now,renderMs);
+  if(!sample)return;
+  frameFps.value=sample.fps.toFixed(0);
+  frameTime.value=sample.frameMs.toFixed(1)+" ms";
+  renderTime.value=sample.renderMs.toFixed(1)+" ms";
+}
+
 let supersampling=true;
 function syncSampling() {
   supersampleButton.setAttribute("aria-pressed",String(supersampling));
@@ -480,6 +544,7 @@ function syncSampling() {
 supersampleButton.addEventListener("click",()=>{
   supersampling=!supersampling;
   syncSampling();
+  resetFrameMeter();
 });
 syncSampling();
 const spriteCanvas = document.createElement("canvas");
@@ -970,6 +1035,7 @@ for(const button of [subpixelAAButton,specularAAButton]){
     if(button===subpixelAAButton)subpixelAAEnabled=!subpixelAAEnabled;
     else specularAAEnabled=!specularAAEnabled;
     button.setAttribute("aria-pressed",String(button===subpixelAAButton?subpixelAAEnabled:specularAAEnabled));
+    resetFrameMeter();
     lastAngle=null;
   });
 }
@@ -1295,7 +1361,10 @@ window.addEventListener("keydown", event => {
 });
 window.addEventListener("keyup", event => heldKeys.delete(event.code));
 window.addEventListener("blur", clearInputs);
-document.addEventListener("visibilitychange", () => { if (document.hidden) clearInputs(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) clearInputs();
+  resetFrameMeter();
+});
 for (const button of touchButtons) {
   button.addEventListener("pointerdown", event => {
     if (event.button !== 0) return;
@@ -2062,6 +2131,7 @@ let activeStack=null, requestedLayers=DEFAULT_LAYERS, requestedRatio=DEFAULT_TEX
 function installStack(stack) {
   if(activeStack===stack) return;
   activeStack=stack;
+  resetFrameMeter();
   chassis=stack.body;
   tire=stack.wheel;
   rollMap=tire?new Int32Array(tire.layers*tire.length):null;
@@ -2241,7 +2311,9 @@ function start() {
     previous=now;
     tickCanisters(dt);
     if(activeStack) update(dt);
+    const renderStart=performance.now();
     render();
+    sampleFrameMeter(now,performance.now()-renderStart);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
