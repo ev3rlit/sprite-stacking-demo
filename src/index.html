@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4륜 물류 로버 · 런타임 스태킹</title>
+<!-- STYLES -->
+</head>
+<body>
+<main>
+  <header>
+    <div class="brand"><span class="mark" aria-hidden="true"></span><h1 id="assetTitle">4륜 물류 로버</h1></div>
+    <div class="controls" role="group" aria-label="주행 모드">
+      <button id="patrol" aria-pressed="true">자동 순찰</button>
+      <button id="manual" aria-pressed="false">직접 조작</button>
+      <button id="reset">초기화</button>
+    </div>
+  </header>
+  <section class="stage" aria-label="산업 시설 시험 구역">
+    <canvas id="yard" aria-label="4륜 물류 로버 주행 화면"></canvas>
+    <div class="stats">
+      <div><span>상태</span><output id="status">불러오는 중</output></div>
+      <div><span>속도</span><output id="speed">0 px/s</output></div>
+    </div>
+    <div class="touch" aria-label="터치 주행 조작">
+      <div><button data-key="left" aria-label="좌회전">◀</button><button data-key="right" aria-label="우회전">▶</button>
+        <button data-key="turnLeft" data-ant-turn hidden aria-label="몸체 왼쪽 회전">↶</button>
+        <button data-key="turnRight" data-ant-turn hidden aria-label="몸체 오른쪽 회전">↷</button></div>
+      <div><button data-key="reverse">후진</button><button data-key="forward">전진</button></div>
+    </div>
+  </section>
+  <div class="asset-controls" role="group" aria-label="차종 및 공용 렌더링">
+    <label for="vehicleSelect">차종</label>
+    <select id="vehicleSelect">
+      <option value="rover">4륜 물류 로버</option>
+      <option value="inspection">산업용 점검 로봇</option>
+      <option value="ant">개미 메카</option>
+      <option value="custom" hidden>사용자 4면 에셋</option>
+    </select>
+    <button id="openFourViews" type="button" title="윗면 · 왼쪽 옆면 · 앞면 · 뒷면의 한 줄 PNG">4면 PNG 열기</button>
+    <input id="fourViewFile" type="file" accept="image/png" hidden>
+    <div class="ability-bar">
+      <button id="mobilityAbility" type="button" aria-pressed="false">부스트 · Shift</button>
+      <output id="abilityStatus">준비</output>
+    </div>
+    <div class="techniques" role="group" aria-label="공용 렌더링">
+      <span class="global-label">공용 렌더링</span>
+      <button id="meshMode" type="button" aria-pressed="true">Marching Cubes</button>
+      <button id="multiViewMode" type="button" aria-pressed="true">다중 뷰 텍스처링</button>
+      <button id="materialLight" type="button" aria-pressed="true">재질 조명</button>
+      <button id="detailNormal" type="button" aria-pressed="true">디테일 노멀</button>
+    </div>
+  </div>
+  <div class="tuning-panels">
+    <section class="tuning-panel" aria-labelledby="mobilityPanelTitle">
+      <div class="tuning-heading">
+        <h2 id="mobilityPanelTitle">모빌리티</h2>
+        <button id="resetView" type="button" aria-label="모빌리티 기본값">기본값</button>
+      </div>
+      <div class="tuning-fields">
+        <div class="view-control">
+          <label for="spacing">Spacing <output id="spacingValue" for="spacing" aria-hidden="true">1.00</output></label>
+          <input id="spacing" type="range" min="0.50" max="2.50" step="0.05" value="1.00" title="선택한 모빌리티의 층 간격">
+        </div>
+        <div class="view-control">
+          <label for="layerCount">Layers <output id="layerValue" for="layerCount" aria-hidden="true">90</output></label>
+          <input id="layerCount" type="range" min="30" max="120" step="1" value="90" title="차체 레이어 수">
+        </div>
+        <div class="view-control">
+          <label for="textureScale">Texture Resolution <output id="textureValue" for="textureScale" aria-hidden="true">1.50×</output></label>
+          <input id="textureScale" type="range" min="0.75" max="2" step="0.25" value="1.5" title="슬라이스의 가로·세로 해상도">
+        </div>
+      </div>
+      <div class="tuning-fields mobility-tuning" id="mobilityTuning" role="group" aria-label="차종별 조작 설정"></div>
+      <div class="tuning-status">
+        <output id="pipelineStatus" aria-live="polite">4면 원본 준비 중…</output>
+        <span id="activeLayers"></span>
+      </div>
+    </section>
+    <section class="tuning-panel" aria-labelledby="environmentPanelTitle">
+      <div class="tuning-heading">
+        <h2 id="environmentPanelTitle">배경·프롭</h2>
+        <button id="resetEnvironment" type="button" aria-label="배경·프롭 기본값">기본값</button>
+      </div>
+      <div class="tuning-fields environment-fields">
+        <div class="view-control">
+          <label for="propSpacing">프롭 Spacing <output id="propSpacingValue" for="propSpacing" aria-hidden="true">1.00</output></label>
+          <input id="propSpacing" type="range" min="0.50" max="2.50" step="0.05" value="1.00" title="캐니스터의 층 간격">
+        </div>
+        <div class="view-control">
+          <label for="floorBrightness">배경 밝기 <output id="floorBrightnessValue" for="floorBrightness" aria-hidden="true">100%</output></label>
+          <input id="floorBrightness" type="range" min="0.50" max="1.50" step="0.05" value="1.00">
+        </div>
+        <div class="view-control">
+          <label for="squash">Squash <output id="squashValue" for="squash" aria-hidden="true">0.75</output></label>
+          <input id="squash" type="range" min="0.45" max="1.00" step="0.01" value="0.75" title="공용 카메라 각도">
+        </div>
+        <div class="view-control">
+          <label for="scale">Scale <output id="scaleValue" for="scale" aria-hidden="true">1.00×</output></label>
+          <input id="scale" type="range" min="0.50" max="2.00" step="0.05" value="1.00" title="공용 화면 배율">
+        </div>
+      </div>
+      <div class="tuning-status">
+        <button type="button" id="supersample" aria-pressed="true">슈퍼샘플링 2×</button>
+        <output id="obstacleTelemetry">표지물 불러오는 중</output>
+        <button type="button" id="resetCanisters">표지물 초기화</button>
+      </div>
+    </section>
+  </div>
+  <footer><div class="keys" id="mobilityHelp">WASD / 방향키 주행 · Shift 부스트 · Space 정지</div><span>4면 원본 · 차체/휠 분리</span></footer>
+</main>
+<!-- SCRIPTS -->
+</body>
+</html>

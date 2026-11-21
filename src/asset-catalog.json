@@ -1,0 +1,184 @@
+{
+  "fleet": {
+    "rover": {
+      "id": "rover",
+      "title": "4륜 물류 로버",
+      "body": "assets/rover/fillet-rover-body-4-view.png",
+      "wheel": "assets/rover/fillet-rover-wheel-4-view.png",
+      "profile": {
+        "body": {
+          "width": 80,
+          "length": 188,
+          "layers": 90,
+          "columns": 45
+        },
+        "wheel": {
+          "width": 20,
+          "length": 44,
+          "layers": 44,
+          "columns": 22
+        },
+        "body_clearance": 13,
+        "front_axle": 48.5,
+        "rear_axle": -56.5,
+        "half_track": 36.5,
+        "art_pixels_per_unit": 2,
+        "well": {
+          "frontRadius": 25.5,
+          "rearRadius": 23.8,
+          "zRadius": 24.2,
+          "frontWidth": 24,
+          "rearWidth": 27
+        }
+      }
+    },
+    "inspection": {
+      "id": "inspection",
+      "title": "산업용 점검 로봇",
+      "body": "assets/inspection/inspection-robot-body-4-view.png",
+      "wheel": "assets/inspection/inspection-robot-wheel-4-view.png",
+      "profile": {
+        "body": {
+          "width": 92,
+          "length": 194,
+          "layers": 150
+        },
+        "wheel": {
+          "width": 30,
+          "length": 74,
+          "layers": 74
+        },
+        "body_clearance": 14,
+        "front_axle": 45,
+        "rear_axle": -63,
+        "half_track": 46.5,
+        "well": {
+          "frontRadius": 43,
+          "rearRadius": 37,
+          "zRadius": 41,
+          "frontWidth": 31,
+          "rearWidth": 35
+        }
+      }
+    },
+    "ant": {
+      "id": "ant",
+      "title": "개미 메카",
+      "parts": {
+        "body": {
+          "w": 50,
+          "h": 114,
+          "n": 56,
+          "source": "assets/ant/ant-mech-body-slices.png"
+        },
+        "center": {
+          "w": 23,
+          "h": 17,
+          "n": 41,
+          "source": "assets/ant/ant-mech-center-leg-slices.png"
+        },
+        "angled": {
+          "w": 23,
+          "h": 30,
+          "n": 41,
+          "source": "assets/ant/ant-mech-angled-leg-slices.png"
+        }
+      },
+      "body": null,
+      "wheel": null,
+      "profile": {
+        "body": {
+          "width": 50,
+          "length": 114,
+          "layers": 56
+        },
+        "body_clearance": 26,
+        "front_axle": 32,
+        "rear_axle": -32,
+        "half_track": 20
+      }
+    }
+  },
+  "props": [
+    {
+      "id": "olive-canister",
+      "source": "assets/canisters/olive-canister-4view.png"
+    },
+    {
+      "id": "canister-01",
+      "source": "assets/canisters/canister-01-4view.png"
+    },
+    {
+      "id": "canister-02",
+      "source": "assets/canisters/canister-02-4view.png"
+    },
+    {
+      "id": "canister-04",
+      "source": "assets/canisters/canister-04-4view.png"
+    },
+    {
+      "id": "canister-06",
+      "source": "assets/canisters/canister-06-4view.png"
+    },
+    {
+      "id": "canister-07",
+      "source": "assets/canisters/canister-07-4view.png"
+    },
+    {
+      "id": "canister-08",
+      "source": "assets/canisters/canister-08-4view.png"
+    },
+    {
+      "id": "canister-09",
+      "source": "assets/canisters/canister-09-4view.png"
+    },
+    {
+      "id": "canister-10",
+      "source": "assets/canisters/canister-10-4view.png"
+    },
+    {
+      "id": "canister-11",
+      "source": "assets/canisters/canister-11-4view.png"
+    },
+    {
+      "id": "canister-12",
+      "source": "assets/canisters/canister-12-4view.png"
+    },
+    {
+      "id": "canister-13",
+      "source": "assets/canisters/canister-13-4view.png"
+    },
+    {
+      "id": "canister-14",
+      "source": "assets/canisters/canister-14-4view.png"
+    },
+    {
+      "id": "canister-15",
+      "source": "assets/canisters/canister-15-4view.png"
+    },
+    {
+      "id": "canister-16",
+      "source": "assets/canisters/canister-16-4view.png"
+    },
+    {
+      "id": "canister-17",
+      "source": "assets/canisters/canister-17-4view.png"
+    },
+    {
+      "id": "canister-18",
+      "source": "assets/canisters/canister-18-4view.png"
+    },
+    {
+      "id": "canister-19",
+      "source": "assets/canisters/canister-19-4view.png"
+    },
+    {
+      "id": "canister-20",
+      "source": "assets/canisters/canister-20-4view.png"
+    },
+    {
+      "id": "canister-21",
+      "source": "assets/canisters/canister-21-4view.png"
+    }
+  ]
+}

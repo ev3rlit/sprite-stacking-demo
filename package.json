@@ -1,0 +1,10 @@
+{
+  "name": "sprite-stacking-test",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --check src/runtime.js && node --check src/worker.js && node --test tests/build.test.mjs"
+  }
+}
