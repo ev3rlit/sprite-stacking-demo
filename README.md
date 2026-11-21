@@ -10,6 +10,23 @@ Drive a four-wheel cargo rover, an inspection robot, or a six-legged ant mech th
   <img src="assets/ant/ant-mech-sprite-stacking-4view-v2.png" width="32%" alt="Assembled ant mech four-view reference" title="Ant Mech">
 </p>
 
+<table width="100%">
+  <tr>
+    <th scope="col" width="33%">Cargo Rover Wheel</th>
+    <th scope="col" width="33%">Inspection Robot Wheel</th>
+    <th scope="col" width="33%">Ant Mech Legs</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="assets/rover/fillet-rover-wheel-4-view.png" width="100%" alt="Cargo rover tire and wheel assembly from four views"></td>
+    <td valign="top"><img src="assets/inspection/inspection-robot-wheel-4-view.png" width="100%" alt="Inspection robot tire and wheel assembly from four views"></td>
+    <td valign="top">
+      <img src="assets/ant/ant-mech-center-leg-4view.png" width="100%" alt="Ant mech center leg from four views" title="Center Leg">
+      <br>
+      <img src="assets/ant/ant-mech-angled-leg-4view.png" width="100%" alt="Ant mech angled leg from four views" title="Angled Leg">
+    </td>
+  </tr>
+</table>
+
 ## Model Turntables
 
 <p align="center">
